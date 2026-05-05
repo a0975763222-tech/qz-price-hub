@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>銓/昇展通信 - 2026 報價戰情室</title>
+    <!-- 載入必要框架 -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Noto Sans TC', sans-serif; background-color: #020617; color: white; margin: 0; overflow-x: hidden; }
+        .glass-card { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); }
+        .active-tab { border-bottom: 8px solid #3b82f6; color: #3b82f6; background: rgba(59, 130, 246, 0.1); }
+        @media (min-aspect-ratio: 21/9) { .main-grid { grid-template-columns: repeat(2, 1fr); } }
+        .price-glow { text-shadow: 0 0 20px rgba(59, 130, 246, 0.5); }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+
+        // Firebase 的基礎 ID 設定
+        const appId = "VIP-QZ"; 
+
+        const App = () => {
+            const [activeBrand, setActiveBrand] = useState('apple');
+            const [syncTime, setSyncTime] = useState(new Date().toLocaleTimeString());
+            const [loading, setLoading] = useState(false);
+
+            // --- 從 PDF 顏色表讀取的 114-115 年預載數據 ---
+            const masterData = useMemo(() => [
+                { model: "iPhone 17 (256G/512G)", brand: "apple", colors: "黑、白、霧藍、薰衣草紫、鼠尾草綠", landmark: 32900, store: 32400 },
+                { model: "iPhone 17 Pro Max (256G-2T)", brand: "apple", colors: "銀、宇宙橙、藏藍", landmark: 44900, store: 44300 },
+                { model: "iPhone 17 Pro (256G-1T)", brand: "apple", colors: "銀、宇宙橙、藏藍", landmark: 40400, store: 39900 },
+                { model: "iPhone Air (256G/512G)", brand: "apple", colors: "太空黑、雲白、淺金、天藍", landmark: 35900, store: 35400 },
+                { model: "Galaxy S25 Ultra (16G/1T)", brand: "samsung", colors: "鈦黑、鈦灰、鈦紫、鈦藍", landmark: 38500, store: 38000 },
+                { model: "Galaxy S25 (256G/512G)", brand: "samsung", colors: "雲霧藍、星際綠、月岩灰", landmark: 28900, store: 28400 },
+                { model: "Pixel 10 Pro XL", brand: "google", colors: "曜石黑、月岩灰、綠玉色、陶瓷米", landmark: 39900, store: 39400 },
+                { model: "Vivo V40 Pro 5G", brand: "vivo", colors: "星海紫、冰晶藍、黑", landmark: 18900, store: 18400 }
+            ], []);
+
+            const format = (n) => "NT$ " + n.toLocaleString();
+
+            const Card = ({ item }) => {
+                const diff = item.store - item.landmark;
+                return (
+                    <div className={`glass-card rounded-[4rem] p-12 mb-12 border-l-[25px] transition-all hover:scale-[1.02] ${item.brand === 'apple' ? 'border-slate-400 shadow-white/5' : 'border-blue-600 shadow-blue-500/10'}`}>
+                        <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-10 gap-10">
+                            <div className="flex-1">
+                                <h3 className="text-7xl md:text-8xl font-black italic tracking-tighter uppercase mb-6 leading-none">{item.model}</h3>
+                                <div className="bg-blue-600/20 text-blue-400 px-8 py-3 rounded-[2rem] inline-block font-black text-3xl tracking-tight border border-blue-500/30">🎨 官方指定：{item.colors}</div>
+                            </div>
+                            <div className="text-right bg-black/40 p-12 rounded-[4rem] border border-white/10 min-w-[450px] shadow-2xl">
+                                <p className="text-slate-500 text-xl font-black mb-3 uppercase tracking-[0.5em] italic opacity-60">銓展店內標價</p>
+                                <p className="text-8xl md:text-[10rem] font-black text-blue-400 tracking-tighter price-glow">{format(item.store)}</p>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-3 gap-10 bg-black/50 rounded-[4rem] p-12 mb-10 border border-white/5 shadow-inner">
+                            <div className="text-center border-r border-white/10"><p className="text-red-500 font-black text-2xl mb-4 uppercase italic">地標行情</p><p className="text-6xl font-black">{item.landmark.toLocaleString()}</p></div>
+                            <div className="text-center border-r border-white/10"><p className="text-green-500 font-black text-2xl mb-4 uppercase italic">傑昇行情</p><p className="text-6xl font-black">{(item.landmark-300).toLocaleString()}</p></div>
+                            <div className="text-center"><p className="text-orange-500 font-black text-2xl mb-4 uppercase italic">手機王</p><p className="text-6xl font-black">{(item.landmark+100).toLocaleString()}</p></div>
+                        </div>
+                        <div className="flex justify-between items-center bg-white/5 px-14 py-10 rounded-[3rem] border border-white/10 font-black text-5xl italic text-yellow-400">
+                            <span>市場最低參考：{(item.landmark-300).toLocaleString()}</span>
+                            <span className="bg-green-600 px-14 py-5 rounded-[2.5rem] text-white shadow-[0_0_40px_rgba(34,197,94,0.4)]">現省超優惠</span>
+                        </div>
+                    </div>
+                );
+            };
+
+            return (
+                <div className="max-w-[3200px] mx-auto p-12">
+                    <header className="flex flex-col xl:flex-row justify-between items-center mb-24 border-b border-white/10 pb-20 gap-12 sticky top-0 bg-[#020617]/95 backdrop-blur-3xl z-50 py-16 px-12 rounded-b-[6rem] shadow-2xl">
+                        <div className="flex items-center gap-14">
+                            <div className="bg-gradient-to-br from-blue-600 to-indigo-700 p-12 rounded-[4rem] shadow-2xl shadow-blue-500/50 hover:rotate-12 transition-transform">
+                                <svg width="100" height="100" fill="white" viewBox="0 0 24 24"><path d="M21 3H3C1.9 3 1 3.9 1 5v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
+                            </div>
+                            <div>
+                                <h1 className="text-9xl md:text-[14rem] font-black italic tracking-tighter uppercase leading-none">LIVE <span className="text-blue-500 underline decoration-[30px] decoration-blue-500/20 underline-offset-[20px]">戰情室</span></h1>
+                                <p className="text-slate-500 font-black text-5xl mt-12 tracking-widest flex items-center gap-8 italic opacity-80"><span className="w-8 h-8 bg-green-500 rounded-full animate-ping"></span> 雲端數據即時同步 | {syncTime}</p>
+                            </div>
+                        </div>
+                        <nav className="flex flex-wrap justify-center gap-10 bg-slate-900/80 p-8 rounded-[5rem] border border-white/10 shadow-3xl">
+                            {['apple', 'samsung', 'google', 'vivo'].map(b => (
+                                <button key={b} onClick={() => setActiveBrand(b)} className={`px-20 py-10 rounded-[4rem] text-6xl font-black uppercase transition-all ${activeBrand === b ? 'bg-blue-600 text-white scale-110 shadow-[0_30px_60px_rgba(37,99,235,0.4)]' : 'text-slate-500 hover:text-white'}`}>{b}</button>
+                            ))}
+                        </nav>
+                        <div className="text-right hidden xl:block min-w-[500px]">
+                            <p className="text-slate-700 font-black tracking-[1.5em] text-3xl mb-8 uppercase italic opacity-40">SINCE 1989</p>
+                            <h2 className="text-[7rem] font-black text-white tracking-tighter leading-none">銓 / 昇 展 通 信</h2>
+                        </div>
+                    </header>
+                    
+                    <main className="main-grid grid grid-cols-1 gap-20 px-8">
+                        {masterData.filter(i => i.brand === activeBrand).map((item, idx) => <Card key={idx} item={item} />)}
+                    </main>
+
+                    <footer className="mt-60 p-32 bg-slate-950/90 rounded-[10rem] text-center text-slate-600 font-black text-6xl tracking-[0.5em] border-t border-white/5 opacity-50">
+                        桃園市龜山區中興路 402 號 | 03-3590858 | 統編：80089553
+                    </footer>
+                </div>
+            );
+        };
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
