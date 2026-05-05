@@ -219,9 +219,56 @@
             const [filter, setFilter] = useState('APPLE');
             const [currentTime, setCurrentTime] = useState(new Date());
 
+            // --- 新增：機器人同步狀態 ---
+            const [syncStatus, setSyncStatus] = useState('pending'); // 狀態: pending, success, error
+            const [lastSyncTime, setLastSyncTime] = useState(null);
+
+            // --- 新增：雲端機器人資料接收通道 ---
+            const fetchRobotPrices = async () => {
+                try {
+                    setSyncStatus('pending');
+                    // 加上時間戳，防止瀏覽器快取舊資料
+                    const res = await fetch('prices.json?t=' + new Date().getTime());
+                    if (!res.ok) throw new Error('找不到機器人報價檔 (prices.json)');
+                    const robotData = await res.json();
+                    
+                    setModels(prev => prev.map(m => {
+                        // 如果機器人資料裡面有這支手機的 ID (例如 'apple_17')
+                        if (robotData[m.id]) {
+                            const updatedVariants = m.variants.map(v => {
+                                // 透過容量 (cap) 來核對 (例如 '256G')
+                                const newPrice = robotData[m.id][v.cap];
+                                if (newPrice) {
+                                    return {
+                                        ...v,
+                                        landmark: newPrice.landmark || v.landmark,
+                                        jasons: newPrice.jasons || v.jasons,
+                                        sogi: newPrice.sogi || v.sogi
+                                    };
+                                }
+                                return v;
+                            });
+                            return { ...m, variants: updatedVariants };
+                        }
+                        return m;
+                    }));
+                    setSyncStatus('success');
+                    setLastSyncTime(new Date());
+                } catch (err) {
+                    console.warn('機器人資料庫連線失敗，自動啟用內建安全底價模式', err);
+                    setSyncStatus('error');
+                }
+            };
+
             useEffect(() => {
                 const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-                return () => clearInterval(timer);
+                
+                // 網頁載入時立刻去抓一次機器人資料
+                fetchRobotPrices();
+                
+                return () => {
+                    clearInterval(timer);
+                };
             }, []);
 
             // 處理個別機型調價的函數 (安全防呆，重整即消失)
@@ -274,6 +321,22 @@
                     </div>
 
                     <div className="hidden lg:flex items-center gap-4 text-slate-400 font-mono text-base pr-5">
+                        <div className="flex flex-col items-end">
+                            <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Robot Sync</span>
+                                {syncStatus === 'success' ? (
+                                    <span className="flex items-center gap-1 text-emerald-400 text-xs font-bold bg-emerald-400/10 px-2 py-1 rounded-full"><CircleIcon size={8} fill="currentColor"/> 成功連線</span>
+                                ) : syncStatus === 'error' ? (
+                                    <span className="flex items-center gap-1 text-red-400 text-xs font-bold bg-red-400/10 px-2 py-1 rounded-full"><CircleIcon size={8} fill="currentColor"/> 離線模式</span>
+                                ) : (
+                                    <span className="flex items-center gap-1 text-amber-400 text-xs font-bold bg-amber-400/10 px-2 py-1 rounded-full"><CircleIcon size={8} fill="currentColor"/> 同步中...</span>
+                                )}
+                            </div>
+                            <span className="text-[10px] text-slate-600 font-bold mt-1">
+                                {lastSyncTime ? `最後更新: ${lastSyncTime.toLocaleTimeString('zh-TW', { hour12: false })}` : '使用內建底價'}
+                            </span>
+                        </div>
+                        <div className="w-px h-8 bg-slate-800 mx-2"></div>
                         {currentTime.toLocaleTimeString('zh-TW', { hour12: false })}
                     </div>
                 </header>
@@ -410,7 +473,7 @@
                         <span className="flex items-center gap-2"><CircleIcon size={8} fill="#10b981" className="text-emerald-500"/> SYSTEM ONLINE</span>
                         <div className="h-4 w-px bg-slate-800 hidden lg:block"></div>
                         <div className="hidden lg:flex items-center gap-2 text-slate-500 font-black italic">
-                            <ZapIcon size={14} className="text-blue-500"/> 旗艦視覺優化版：單機動態微調授權啟用 (Safe Mode)
+                            <ZapIcon size={14} className="text-blue-500"/> 旗艦視覺優化版：機器人全自動連線 + 離線安全底價雙系統 (Auto-Sync Mode)
                         </div>
                     </div>
                     <p>銓/昇展通信 | 桃園市龜山區中興路402號 | 03-3590858</p>
