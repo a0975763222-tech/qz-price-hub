@@ -22,9 +22,18 @@
         /* 隱藏捲動軸但保留捲動功能 */
         .hide-scroll::-webkit-scrollbar { display: none; }
         .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* 針對手機瀏覽器的安全高度設定 */
+        html, body {
+            height: 100%;
+            height: 100dvh; 
+            width: 100%;
+            margin: 0;
+            padding: 0;
+        }
     </style>
 </head>
-<body class="bg-[#020617] text-slate-100 font-sans overflow-hidden h-screen w-screen selection:bg-blue-500/30">
+<body class="bg-[#020617] text-slate-100 font-sans overflow-hidden selection:bg-blue-500/30">
     
     <!-- React 渲染根節點 -->
     <div id="root" class="h-full w-full"></div>
@@ -47,38 +56,12 @@
         // --- 品牌 Logo 組件 ---
         const BrandLogo = ({ category, size = 18 }) => {
             const logos = {
-                'APPLE': (
-                <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M17.05 20.28c-.96.78-2.01 1.21-3.23 1.21-1.12 0-2-.32-2.88-.32-.88 0-1.87.33-2.91.33-2.3 0-4.66-1.55-5.69-3.86-1.29-2.86-.44-7.1 1.63-9.59.88-1.06 2-1.74 3.19-1.74 1.12 0 1.76.35 2.7.35s1.69-.37 2.94-.37c1.17 0 2.29.5 3.1 1.34-2.86 1.4-2.4 5.38.38 6.55-.63 1.69-1.42 3.32-3.23 6zM13.68 4.39c-.1-.79.28-1.7 1.03-2.58.74-.88 1.83-1.4 2.82-1.35.13.88-.33 1.86-1.07 2.65-.75.81-1.73 1.35-2.78 1.28z"/>
-                </svg>
-                ),
-                'SAMSUNG': (
-                <svg width={size * 3} height={size} viewBox="0 0 100 20" fill="currentColor">
-                    <path d="M14.8 4.4C12.2 2.4 8.8 1.6 5.6 1.6 1.6 1.6 0 3.6 0 6.4c0 7 20 3 20 12.4 0 3.2-2.2 5.2-6.4 5.2-3.6 0-7.2-1-10-3.2l1.6-3.2c2.4 2 5.6 2.8 8.4 2.8 2.4 0 4-1.2 4-2.8 0-7.2-20-3.2-20-12.8C0 2 2.2 0 6 0c3.2 0 6.4.8 9 2.6l-.2 1.8z" />
-                    <path d="M30 0h2.4l5.4 11.2h-2.5l-1.1-2.4h-5.8l-1.1 2.4h-2.5L30 0zm1.3 7.2l1.6-3.6 1.6 3.6h-3.2z M50 0l4 8.2 4-8.2h2.6v11.2h-2.2V3.2L54.6 11h-1.2L49.6 3.2v8h-2.2V0h2.6z M70 2.2c-1.3-1-3-1.4-4.6-1.4-2 0-2.8 1-2.8 2.4 0 3.5 10 1.5 10 6.2 0 1.6-1.1 2.6-3.2 2.6-1.8 0-3.6-.5-5-1.6l.8-1.6c1.2 1 2.8 1.4 4.2 1.4 1.2 0 2-.6 2-1.4 0-3.6-10-1.6-10-6.4 0-1.6 1.1-2.6 3-2.6 1.6 0 3.2.4 4.5 1.3l-.1.9z" />
-                </svg>
-                ),
-                'OPPO': (
-                <svg width={size * 2.5} height={size} viewBox="0 0 100 25" fill="currentColor">
-                    <path d="M25 0C11.2 0 0 5.6 0 12.5S11.2 25 25 25s25-5.6 25-12.5S38.8 0 25 0zm0 20c-8.3 0-15-3.4-15-7.5s6.7-7.5 15-7.5 15 3.4 15 7.5-6.7 7.5-15 7.5zm50-20c-13.8 0-25 5.6-25 12.5s11.2 12.5 25 12.5 25-5.6 25-12.5S88.8 0 75 0zm0 20c-8.3 0-15-3.4-15-7.5s6.7-7.5 15-7.5 15 3.4 15 7.5-6.7 7.5-15 7.5z"/>
-                </svg>
-                ),
-                'VIVO': (
-                <svg width={size * 2.5} height={size} viewBox="0 0 100 30" fill="currentColor">
-                    <path d="M0 0l15 25L30 0h-8l-7 12-7-12H0zm35 0v25h8V0h-8zm25 0l15 25L90 0h-8l-7 12-7-12H60z" />
-                </svg>
-                ),
-                'XIAOMI': (
-                <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
-                    <rect x="2" y="2" width="20" height="20" rx="5" />
-                    <path d="M12 7v10h2v-8h2v8h2V7h-6zm-4 0v6H6V7H4v8h6V7H8z" fill="#fff"/>
-                </svg>
-                ),
-                'GOOGLE': (
-                <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z"/>
-                </svg>
-                ),
+                'APPLE': <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor"><path d="M17.05 20.28c-.96.78-2.01 1.21-3.23 1.21-1.12 0-2-.32-2.88-.32-.88 0-1.87.33-2.91.33-2.3 0-4.66-1.55-5.69-3.86-1.29-2.86-.44-7.1 1.63-9.59.88-1.06 2-1.74 3.19-1.74 1.12 0 1.76.35 2.7.35s1.69-.37 2.94-.37c1.17 0 2.29.5 3.1 1.34-2.86 1.4-2.4 5.38.38 6.55-.63 1.69-1.42 3.32-3.23 6zM13.68 4.39c-.1-.79.28-1.7 1.03-2.58.74-.88 1.83-1.4 2.82-1.35.13.88-.33 1.86-1.07 2.65-.75.81-1.73 1.35-2.78 1.28z"/></svg>,
+                'SAMSUNG': <svg width={size * 3} height={size} viewBox="0 0 100 20" fill="currentColor"><path d="M14.8 4.4C12.2 2.4 8.8 1.6 5.6 1.6 1.6 1.6 0 3.6 0 6.4c0 7 20 3 20 12.4 0 3.2-2.2 5.2-6.4 5.2-3.6 0-7.2-1-10-3.2l1.6-3.2c2.4 2 5.6 2.8 8.4 2.8 2.4 0 4-1.2 4-2.8 0-7.2-20-3.2-20-12.8C0 2 2.2 0 6 0c3.2 0 6.4.8 9 2.6l-.2 1.8z" /><path d="M30 0h2.4l5.4 11.2h-2.5l-1.1-2.4h-5.8l-1.1 2.4h-2.5L30 0zm1.3 7.2l1.6-3.6 1.6 3.6h-3.2z M50 0l4 8.2 4-8.2h2.6v11.2h-2.2V3.2L54.6 11h-1.2L49.6 3.2v8h-2.2V0h2.6z M70 2.2c-1.3-1-3-1.4-4.6-1.4-2 0-2.8 1-2.8 2.4 0 3.5 10 1.5 10 6.2 0 1.6-1.1 2.6-3.2 2.6-1.8 0-3.6-.5-5-1.6l.8-1.6c1.2 1 2.8 1.4 4.2 1.4 1.2 0 2-.6 2-1.4 0-3.6-10-1.6-10-6.4 0-1.6 1.1-2.6 3-2.6 1.6 0 3.2.4 4.5 1.3l-.1.9z" /></svg>,
+                'OPPO': <svg width={size * 2.5} height={size} viewBox="0 0 100 25" fill="currentColor"><path d="M25 0C11.2 0 0 5.6 0 12.5S11.2 25 25 25s25-5.6 25-12.5S38.8 0 25 0zm0 20c-8.3 0-15-3.4-15-7.5s6.7-7.5 15-7.5 15 3.4 15 7.5-6.7 7.5-15 7.5zm50-20c-13.8 0-25 5.6-25 12.5s11.2 12.5 25 12.5 25-5.6 25-12.5S88.8 0 75 0zm0 20c-8.3 0-15-3.4-15-7.5s6.7-7.5 15-7.5 15 3.4 15 7.5-6.7 7.5-15 7.5z"/></svg>,
+                'VIVO': <svg width={size * 2.5} height={size} viewBox="0 0 100 30" fill="currentColor"><path d="M0 0l15 25L30 0h-8l-7 12-7-12H0zm35 0v25h8V0h-8zm25 0l15 25L90 0h-8l-7 12-7-12H60z" /></svg>,
+                'XIAOMI': <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor"><rect x="2" y="2" width="20" height="20" rx="5" /><path d="M12 7v10h2v-8h2v8h2V7h-6zm-4 0v6H6V7H4v8h6V7H8z" fill="#fff"/></svg>,
+                'GOOGLE': <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor"><path d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z"/></svg>,
                 '平板類': <TabletIcon size={size} />,
                 '智慧手錶': <WatchIcon size={size} />,
                 '藍牙耳機': <HeadphonesIcon size={size} />
@@ -206,7 +189,6 @@
         ];
 
         function App() {
-            // 把靜態陣列轉為 State 狀態，同時為每個變體預設加上 offset: 0
             const [models, setModels] = useState(() => 
                 INITIAL_MODELS.map(m => ({
                     ...m, 
@@ -214,29 +196,23 @@
                 }))
             );
             
-            // 本機暫存的加碼控制
             const [globalMargin, setGlobalMargin] = useState(800); 
             const [filter, setFilter] = useState('APPLE');
             const [currentTime, setCurrentTime] = useState(new Date());
 
-            // --- 新增：機器人同步狀態 ---
-            const [syncStatus, setSyncStatus] = useState('pending'); // 狀態: pending, success, error
+            const [syncStatus, setSyncStatus] = useState('pending');
             const [lastSyncTime, setLastSyncTime] = useState(null);
 
-            // --- 新增：雲端機器人資料接收通道 ---
             const fetchRobotPrices = async () => {
                 try {
                     setSyncStatus('pending');
-                    // 加上時間戳，防止瀏覽器快取舊資料
                     const res = await fetch('prices.json?t=' + new Date().getTime());
-                    if (!res.ok) throw new Error('找不到機器人報價檔 (prices.json)');
+                    if (!res.ok) throw new Error('找不到機器人報價檔');
                     const robotData = await res.json();
                     
                     setModels(prev => prev.map(m => {
-                        // 如果機器人資料裡面有這支手機的 ID (例如 'apple_17')
                         if (robotData[m.id]) {
                             const updatedVariants = m.variants.map(v => {
-                                // 透過容量 (cap) 來核對 (例如 '256G')
                                 const newPrice = robotData[m.id][v.cap];
                                 if (newPrice) {
                                     return {
@@ -262,16 +238,10 @@
 
             useEffect(() => {
                 const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-                
-                // 網頁載入時立刻去抓一次機器人資料
                 fetchRobotPrices();
-                
-                return () => {
-                    clearInterval(timer);
-                };
+                return () => clearInterval(timer);
             }, []);
 
-            // 處理個別機型調價的函數 (安全防呆，重整即消失)
             const updateIndividualOffset = (modelId, variantIndex, change) => {
                 setModels(prev => prev.map(m => {
                     if (m.id === modelId) {
@@ -293,10 +263,10 @@
             const categories = ['APPLE', 'SAMSUNG', 'OPPO', 'VIVO', 'XIAOMI', 'GOOGLE', 'ASUS', 'MOTOROLA', 'HTC', 'SHARP', 'REALME', '平板類', '智慧手錶', '藍牙耳機'];
 
             return (
-                <div className="h-screen w-screen bg-[#020617] text-slate-100 flex flex-col font-sans overflow-hidden">
+                <div className="h-full min-h-screen w-full bg-[#020617] text-slate-100 flex flex-col font-sans">
                 
                 {/* 頂部管理面板 */}
-                <header className="flex flex-col lg:flex-row justify-between items-center bg-slate-900 border-b border-slate-800 p-4 shadow-2xl z-30 gap-4 lg:gap-0">
+                <header className="shrink-0 flex flex-col lg:flex-row justify-between items-center bg-slate-900 border-b border-slate-800 p-4 shadow-2xl z-30 gap-4 lg:gap-0 sticky top-0">
                     <div className="flex items-center gap-4">
                         <div className="bg-blue-600 p-2.5 rounded-xl text-white shadow-lg">
                             <DatabaseIcon />
@@ -342,7 +312,7 @@
                 </header>
 
                 {/* 品牌導覽列 (智慧多排折行版) */}
-                <div className="bg-slate-900/50 border-b border-slate-800 p-3 lg:p-4 backdrop-blur-md z-20">
+                <div className="shrink-0 bg-slate-900/50 border-b border-slate-800 p-3 lg:p-4 z-20">
                     <div className="flex flex-wrap justify-center gap-x-2 gap-y-3 lg:gap-x-3 lg:gap-y-4 max-w-7xl mx-auto px-2">
                         {categories.map(cat => (
                         <button 
@@ -357,7 +327,7 @@
                 </div>
 
                 {/* 標題列 (手機版自動隱藏，大螢幕顯示) */}
-                <div className="hidden lg:grid bg-slate-950/80 px-8 py-3 border-b border-slate-800 grid-cols-12 gap-4 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] sticky top-0 z-10 shadow-lg">
+                <div className="shrink-0 hidden lg:grid bg-slate-950/80 px-8 py-3 border-b border-slate-800 grid-cols-12 gap-4 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] shadow-lg">
                     <div className="col-span-3 px-6 text-center">型號 / 顏色 (置中跨區)</div>
                     <div className="col-span-1 text-center">容量</div>
                     <div className="col-span-2 text-center text-slate-500 font-bold">市場行情 (地/傑/王)</div>
@@ -366,14 +336,13 @@
                 </div>
 
                 {/* 主數據區塊 */}
-                <main className="flex-1 p-2 lg:p-4 overflow-y-auto custom-scrollbar bg-slate-950/10">
-                    <div className="flex flex-col gap-2 max-w-[2200px] mx-auto pb-12">
+                <main className="flex-1 p-2 lg:p-4 overflow-y-auto custom-scrollbar bg-slate-950/10 min-h-0">
+                    <div className="flex flex-col gap-3 lg:gap-2 max-w-[2200px] mx-auto pb-12">
                     {filteredModels.length > 0 ? (
                         filteredModels.map((m) => (
                         <div key={m.id} className="bg-slate-900/30 border border-slate-800/50 rounded-xl p-3 lg:p-4 flex flex-col gap-2 relative group hover:bg-slate-900/50 transition-all border-l-4 border-l-blue-600/20 shadow-sm overflow-hidden">
 
                             {m.variants.map((v, idx) => {
-                            // 計算這台手機最終價格 (地標 + 全局加碼 + 個別微調)
                             const chuanPrice = v.landmark + globalMargin + (v.offset || 0);
                             
                             return (
@@ -388,12 +357,12 @@
                                                 <BrandLogo category={m.category} size={14} />
                                                 <span className="text-[9px] font-black uppercase tracking-[0.2em] text-blue-400/80">{m.brand}</span>
                                             </div>
-                                            <span className="text-2xl lg:text-3xl font-black text-white uppercase tracking-tighter leading-tight group-hover:text-blue-400 transition-colors block break-words">
+                                            <span className="text-2xl lg:text-3xl font-black text-white uppercase tracking-tighter leading-tight group-hover:text-blue-400 transition-colors block break-words text-center">
                                                 {m.name}
                                             </span>
                                         </div>
                                         <div className="w-16 h-0.5 bg-blue-600/20 rounded-full"></div>
-                                        <p className="text-[clamp(0.85rem,1.5vw,1.1rem)] text-slate-400 font-bold tracking-wide leading-relaxed break-words w-full px-2">
+                                        <p className="text-[clamp(0.85rem,1.5vw,1.1rem)] text-slate-400 font-bold tracking-wide leading-relaxed break-words w-full px-2 text-center">
                                             <span className="text-blue-500/80 font-black mr-1">顏色：</span>
                                             {m.colors}
                                         </p>
@@ -401,56 +370,56 @@
                                     ) : (
                                     <div className="flex flex-col items-center gap-1 opacity-20 group-hover:opacity-40 transition-opacity">
                                         <ChevronRightIcon size={24} className="text-slate-500 rotate-90 lg:rotate-90"/>
-                                        <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">同一機型系列</span>
+                                        <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest mt-1">同一機型系列</span>
                                     </div>
                                     )}
                                 </div>
 
                                 {/* 容量 */}
                                 <div className="w-full lg:col-span-1 text-center">
-                                    <span className="bg-slate-800 text-slate-200 px-6 py-2 lg:px-4 rounded-xl font-black text-[clamp(1rem,2vw,1.25rem)] border border-slate-700 shadow-inner group-hover:bg-slate-700 transition-colors inline-block w-full lg:w-auto">
+                                    <span className="bg-slate-800 text-slate-200 px-6 py-3 lg:py-2 lg:px-4 rounded-xl font-black text-[clamp(1.1rem,2vw,1.25rem)] border border-slate-700 shadow-inner group-hover:bg-slate-700 transition-colors inline-block w-full lg:w-auto text-center">
                                         {v.cap}
                                     </span>
                                 </div>
                                 
                                 {/* 市場行情 */}
                                 <div className="w-full lg:col-span-2 flex flex-row lg:flex-col items-center justify-center gap-2 lg:gap-1 lg:border-x border-white/5 px-0 lg:px-4">
-                                    <div className="flex-1 lg:w-full flex flex-col lg:flex-row justify-between items-center py-1.5 lg:py-0.5 px-2 lg:px-3 hover:bg-red-500/5 rounded transition-colors bg-black/20 lg:bg-transparent">
+                                    <div className="flex-1 lg:w-full flex flex-col lg:flex-row justify-between items-center py-2 lg:py-0.5 px-2 lg:px-3 hover:bg-red-500/5 rounded transition-colors bg-black/20 lg:bg-transparent">
                                         <span className="text-[10px] lg:text-[9px] text-red-500/60 font-black">地標</span>
-                                        <p className="text-lg lg:text-xl font-mono font-black text-red-500 leading-none">${v.landmark.toLocaleString()}</p>
+                                        <p className="text-lg lg:text-xl font-mono font-black text-red-500 leading-none mt-1 lg:mt-0">${v.landmark.toLocaleString()}</p>
                                     </div>
-                                    <div className="flex-1 lg:w-full flex flex-col lg:flex-row justify-between items-center py-1.5 lg:py-0.5 px-2 lg:px-3 hover:bg-emerald-500/5 rounded transition-colors bg-black/20 lg:bg-transparent">
+                                    <div className="flex-1 lg:w-full flex flex-col lg:flex-row justify-between items-center py-2 lg:py-0.5 px-2 lg:px-3 hover:bg-emerald-500/5 rounded transition-colors bg-black/20 lg:bg-transparent">
                                         <span className="text-[10px] lg:text-[9px] text-emerald-500/60 font-black">傑昇</span>
-                                        <p className="text-lg lg:text-xl font-mono font-bold text-emerald-500 leading-none">${v.jasons.toLocaleString()}</p>
+                                        <p className="text-lg lg:text-xl font-mono font-bold text-emerald-500 leading-none mt-1 lg:mt-0">${v.jasons.toLocaleString()}</p>
                                     </div>
-                                    <div className="flex-1 lg:w-full flex flex-col lg:flex-row justify-between items-center py-1.5 lg:py-0.5 px-2 lg:px-3 lg:border-t border-white/5 lg:mt-1 lg:pt-1 hover:bg-orange-500/5 rounded transition-colors bg-black/20 lg:bg-transparent">
+                                    <div className="flex-1 lg:w-full flex flex-col lg:flex-row justify-between items-center py-2 lg:py-0.5 px-2 lg:px-3 lg:border-t border-white/5 lg:mt-1 lg:pt-1 hover:bg-orange-500/5 rounded transition-colors bg-black/20 lg:bg-transparent">
                                         <span className="text-[10px] lg:text-[9px] text-orange-500/60 font-black">手機王</span>
-                                        <p className="text-lg lg:text-xl font-mono font-bold text-orange-500 leading-none">${v.sogi.toLocaleString()}</p>
+                                        <p className="text-lg lg:text-xl font-mono font-bold text-orange-500 leading-none mt-1 lg:mt-0">${v.sogi.toLocaleString()}</p>
                                     </div>
                                 </div>
 
                                 {/* 銓展售價 */}
-                                <div className="w-full lg:col-span-4 text-center bg-blue-600/5 py-6 lg:py-8 rounded-2xl border border-blue-500/20 shadow-xl lg:mx-4 transform group-hover:scale-105 transition-transform duration-300 relative overflow-hidden">
+                                <div className="w-full lg:col-span-4 text-center bg-blue-600/5 py-8 lg:py-8 rounded-2xl border border-blue-500/20 shadow-xl lg:mx-4 transform group-hover:scale-105 transition-transform duration-300 relative overflow-hidden">
                                     <div className="absolute top-0 right-0 p-1 opacity-5"><ZapIcon size={24}/></div>
-                                    <p className="text-[clamp(2.25rem,4vw,3rem)] font-mono font-black text-white leading-none tracking-tighter drop-shadow-[0_0_10px_rgba(255,255,255,0.2)] group-hover:text-emerald-400 transition-colors">
+                                    <p className="text-[clamp(2.5rem,5vw,3rem)] font-mono font-black text-white leading-none tracking-tighter drop-shadow-[0_0_10px_rgba(255,255,255,0.2)] group-hover:text-emerald-400 transition-colors">
                                         ${chuanPrice.toLocaleString()}
                                     </p>
                                 </div>
 
                                 {/* 單機型微調控制 */}
-                                <div className="w-full lg:col-span-2 flex flex-col lg:flex-row items-center justify-center gap-2 lg:gap-4 lg:border-l border-white/5 px-4 pt-2 lg:pt-0">
-                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest lg:hidden">單機型優惠微調 (暫時)</span>
-                                    <div className="flex items-center gap-4">
-                                        <button onClick={() => updateIndividualOffset(m.id, idx, -100)} className="w-10 h-10 flex items-center justify-center bg-slate-800 rounded-lg text-slate-400 hover:text-white border border-white/5 active:scale-90 transition-all shadow-lg">
-                                            <MinusIcon size={20}/>
+                                <div className="w-full lg:col-span-2 flex flex-col lg:flex-row items-center justify-center gap-2 lg:gap-4 lg:border-l border-white/5 px-4 pt-3 lg:pt-0 pb-2 lg:pb-0">
+                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest lg:hidden mb-1">單機優惠調整</span>
+                                    <div className="flex items-center gap-6 lg:gap-4">
+                                        <button onClick={() => updateIndividualOffset(m.id, idx, -100)} className="w-12 h-12 lg:w-10 lg:h-10 flex items-center justify-center bg-slate-800 rounded-lg text-slate-400 hover:text-white border border-white/5 active:scale-90 transition-all shadow-lg">
+                                            <MinusIcon size={24}/>
                                         </button>
-                                        <div className="text-center w-16">
-                                            <p className={`text-xl font-mono font-black ${v.offset > 0 ? 'text-emerald-400' : v.offset < 0 ? 'text-red-400' : 'text-slate-700'}`}>
+                                        <div className="text-center w-20 lg:w-16">
+                                            <p className={`text-2xl lg:text-xl font-mono font-black ${v.offset > 0 ? 'text-emerald-400' : v.offset < 0 ? 'text-red-400' : 'text-slate-700'}`}>
                                                 {v.offset >= 0 ? '+' : ''}{(v.offset || 0).toLocaleString()}
                                             </p>
                                         </div>
-                                        <button onClick={() => updateIndividualOffset(m.id, idx, 100)} className="w-10 h-10 flex items-center justify-center bg-slate-800 rounded-lg text-slate-400 hover:text-white border border-white/5 active:scale-90 transition-all shadow-lg">
-                                            <PlusIcon size={20}/>
+                                        <button onClick={() => updateIndividualOffset(m.id, idx, 100)} className="w-12 h-12 lg:w-10 lg:h-10 flex items-center justify-center bg-slate-800 rounded-lg text-slate-400 hover:text-white border border-white/5 active:scale-90 transition-all shadow-lg">
+                                            <PlusIcon size={24}/>
                                         </button>
                                     </div>
                                 </div>
@@ -468,15 +437,15 @@
                     </div>
                 </main>
 
-                <footer className="py-3 bg-slate-950 border-t border-slate-900 px-4 lg:px-8 flex flex-col lg:flex-row justify-between items-center text-[9px] lg:text-[10px] font-bold text-slate-700 tracking-widest uppercase relative z-30 shadow-2xl gap-2 lg:gap-0 text-center lg:text-left">
-                    <div className="flex gap-4 lg:gap-10 items-center">
+                <footer className="shrink-0 py-3 bg-slate-950 border-t border-slate-900 px-4 lg:px-8 flex flex-col lg:flex-row justify-between items-center text-[9px] lg:text-[10px] font-bold text-slate-700 tracking-widest uppercase relative z-30 shadow-2xl gap-2 lg:gap-0 text-center lg:text-left">
+                    <div className="flex gap-4 lg:gap-10 items-center justify-center lg:justify-start w-full lg:w-auto">
                         <span className="flex items-center gap-2"><CircleIcon size={8} fill="#10b981" className="text-emerald-500"/> SYSTEM ONLINE</span>
                         <div className="h-4 w-px bg-slate-800 hidden lg:block"></div>
                         <div className="hidden lg:flex items-center gap-2 text-slate-500 font-black italic">
-                            <ZapIcon size={14} className="text-blue-500"/> 旗艦視覺優化版：機器人全自動連線 + 離線安全底價雙系統 (Auto-Sync Mode)
+                            <ZapIcon size={14} className="text-blue-500"/> 旗艦視覺優化版：行動裝置抗擠壓 (Anti-Squash RWD) 雙棲顯示
                         </div>
                     </div>
-                    <p>銓/昇展通信 | 桃園市龜山區中興路402號 | 03-3590858</p>
+                    <p className="w-full lg:w-auto text-center lg:text-right">銓/昇展通信 | 桃園市龜山區中興路402號 | 03-3590858</p>
                 </footer>
                 </div>
             );
