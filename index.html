@@ -2,121 +2,423 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>銓/昇展通信 - 2026 報價戰情室 V3.0</title>
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>銓展通訊 - 全系列戰情中心</title>
+    <!-- 引入 Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
+    <!-- 引入 React 與 ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- 引入 Babel (用來在瀏覽器編譯 JSX) -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- 引入特殊字體 -->
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Noto Sans TC', sans-serif; background-color: #020617; color: white; margin: 0; overflow-x: hidden; }
-        .glass-card { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); }
-        .active-tab { border-bottom: 8px solid #3b82f6; color: #3b82f6; background: rgba(59, 130, 246, 0.1); }
-        @media (min-aspect-ratio: 21/9) { .main-grid { grid-template-columns: repeat(2, 1fr); } }
-        .price-glow { text-shadow: 0 0 30px rgba(59, 130, 246, 0.6); }
-        .ambient-glow {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: radial-gradient(circle at 10% 20%, rgba(139, 92, 246, 0.1) 0%, transparent 40%),
-                        radial-gradient(circle at 90% 80%, rgba(59, 130, 246, 0.1) 0%, transparent 40%);
-            pointer-events: none; z-index: -1;
-        }
+        .custom-scrollbar::-webkit-scrollbar { height: 4px; width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 20px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        .tracking-tighter { letter-spacing: -0.05em; }
+        /* 隱藏捲動軸但保留捲動功能 */
+        .hide-scroll::-webkit-scrollbar { display: none; }
+        .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
-<body>
-    <div class="ambient-glow"></div>
-    <div id="root"></div>
+<body class="bg-[#020617] text-slate-100 font-sans overflow-hidden h-screen w-screen selection:bg-blue-500/30">
+    
+    <!-- React 渲染根節點 -->
+    <div id="root" class="h-full w-full"></div>
 
     <script type="text/babel">
         const { useState, useEffect, useMemo } = React;
 
-        const App = () => {
-            const [activeBrand, setActiveBrand] = useState('apple');
-            const [syncTime] = useState(new Date().toLocaleTimeString());
+        // --- 內建圖示 (完全去依賴化，保證不破圖) ---
+        const DatabaseIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 3.79 2 6s4.48 4 10 4 10-1.79 10-4-4.48-4-10-4zm0 6c-4.52 0-8.2-1.12-9.64-2.61.37 1.15 4.3 3.61 9.64 3.61s9.27-2.46 9.64-3.61C20.2 6.88 16.52 8 12 8zm0 2c-5.52 0-10 1.79-10 4s4.48 4 10 4 10-1.79 10-4-4.48-4-10-4zm0 6c-4.52 0-8.2-1.12-9.64-2.61.37 1.15 4.3 3.61 9.64 3.61s9.27-2.46 9.64-3.61C20.2 14.88 16.52 16 12 16zm0 2c-5.52 0-10 1.79-10 4s4.48 4 10 4 10-1.79 10-4-4.48-4-10-4zm0 6c-4.52 0-8.2-1.12-9.64-2.61.37 1.15 4.3 3.61 9.64 3.61s9.27-2.46 9.64-3.61C20.2 22.88 16.52 24 12 24z"/></svg>;
+        const ZapIcon = ({ size=24, className="" }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>;
+        const ChevronRightIcon = ({ size=24, className="" }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="9 18 15 12 9 6"></polyline></svg>;
+        const TabletIcon = ({ size=18 }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>;
+        const SmartphoneIcon = ({ size=18 }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>;
+        const WatchIcon = ({ size=18 }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="7"></circle><polyline points="12 9 12 12 13.5 13.5"></polyline><path d="M16.51 17.35l-.35 3.83a2 2 0 0 1-2 1.82H9.83a2 2 0 0 1-2-1.82l-.35-3.83m.01-10.7l.35-3.83A2 2 0 0 1 9.83 1h4.35a2 2 0 0 1 2 1.82l.35 3.83"></path></svg>;
+        const HeadphonesIcon = ({ size=18 }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"></path><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"></path></svg>;
+        const CircleIcon = ({ size=8, fill, className="" }) => <svg width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"></circle></svg>;
+        const PlusIcon = ({ size=24 }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>;
+        const MinusIcon = ({ size=24 }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>;
 
-            // 整合 114-115 年 PDF 顏色表與 2026 最新規格 (備援數據)
-            const phoneData = useMemo(() => [
-                { model: "iPhone 17 (256G/512G)", brand: "apple", colors: "薰衣草紫、霧藍、鼠尾草綠、黑、白", landmark: 32900, store: 32400, spec: "A19+, 120Hz ProMotion" },
-                { model: "iPhone 17 Pro Max (256G-2T)", brand: "apple", colors: "銀、宇宙橙、藏藍", landmark: 44900, store: 44300, spec: "A19 Pro, 鈦金屬設計" },
-                { model: "iPhone Air (256G/512G)", brand: "apple", colors: "太空黑、雲白、淺金、天藍", landmark: 35900, store: 35400, spec: "全新超薄系列, Wi-Fi 7" },
-                { model: "Galaxy S25 Ultra (16G/1T)", brand: "samsung", colors: "鈦黑、鈦灰、鈦紫、鈦藍", landmark: 38500, store: 38000, spec: "S8 Gen 5, 2億畫素主鏡" },
-                { model: "Pixel 10 Pro XL", brand: "google", colors: "曜石黑、月岩灰、綠玉色、陶瓷米", landmark: 39900, store: 39400, spec: "Google AI 核心, 全新感光元件" },
-                { model: "Vivo V40 Pro 5G", brand: "vivo", colors: "星海紫、冰晶藍、黑", landmark: 18900, store: 18400, spec: "蔡司聯合影像, 80W 極速快充" }
-            ], []);
+        // --- 品牌 Logo 組件 ---
+        const BrandLogo = ({ category, size = 18 }) => {
+            const logos = {
+                'APPLE': (
+                <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M17.05 20.28c-.96.78-2.01 1.21-3.23 1.21-1.12 0-2-.32-2.88-.32-.88 0-1.87.33-2.91.33-2.3 0-4.66-1.55-5.69-3.86-1.29-2.86-.44-7.1 1.63-9.59.88-1.06 2-1.74 3.19-1.74 1.12 0 1.76.35 2.7.35s1.69-.37 2.94-.37c1.17 0 2.29.5 3.1 1.34-2.86 1.4-2.4 5.38.38 6.55-.63 1.69-1.42 3.32-3.23 6zM13.68 4.39c-.1-.79.28-1.7 1.03-2.58.74-.88 1.83-1.4 2.82-1.35.13.88-.33 1.86-1.07 2.65-.75.81-1.73 1.35-2.78 1.28z"/>
+                </svg>
+                ),
+                'SAMSUNG': (
+                <svg width={size * 3} height={size} viewBox="0 0 100 20" fill="currentColor">
+                    <path d="M14.8 4.4C12.2 2.4 8.8 1.6 5.6 1.6 1.6 1.6 0 3.6 0 6.4c0 7 20 3 20 12.4 0 3.2-2.2 5.2-6.4 5.2-3.6 0-7.2-1-10-3.2l1.6-3.2c2.4 2 5.6 2.8 8.4 2.8 2.4 0 4-1.2 4-2.8 0-7.2-20-3.2-20-12.8C0 2 2.2 0 6 0c3.2 0 6.4.8 9 2.6l-.2 1.8z" />
+                    <path d="M30 0h2.4l5.4 11.2h-2.5l-1.1-2.4h-5.8l-1.1 2.4h-2.5L30 0zm1.3 7.2l1.6-3.6 1.6 3.6h-3.2z M50 0l4 8.2 4-8.2h2.6v11.2h-2.2V3.2L54.6 11h-1.2L49.6 3.2v8h-2.2V0h2.6z M70 2.2c-1.3-1-3-1.4-4.6-1.4-2 0-2.8 1-2.8 2.4 0 3.5 10 1.5 10 6.2 0 1.6-1.1 2.6-3.2 2.6-1.8 0-3.6-.5-5-1.6l.8-1.6c1.2 1 2.8 1.4 4.2 1.4 1.2 0 2-.6 2-1.4 0-3.6-10-1.6-10-6.4 0-1.6 1.1-2.6 3-2.6 1.6 0 3.2.4 4.5 1.3l-.1.9z" />
+                </svg>
+                ),
+                'OPPO': (
+                <svg width={size * 2.5} height={size} viewBox="0 0 100 25" fill="currentColor">
+                    <path d="M25 0C11.2 0 0 5.6 0 12.5S11.2 25 25 25s25-5.6 25-12.5S38.8 0 25 0zm0 20c-8.3 0-15-3.4-15-7.5s6.7-7.5 15-7.5 15 3.4 15 7.5-6.7 7.5-15 7.5zm50-20c-13.8 0-25 5.6-25 12.5s11.2 12.5 25 12.5 25-5.6 25-12.5S88.8 0 75 0zm0 20c-8.3 0-15-3.4-15-7.5s6.7-7.5 15-7.5 15 3.4 15 7.5-6.7 7.5-15 7.5z"/>
+                </svg>
+                ),
+                'VIVO': (
+                <svg width={size * 2.5} height={size} viewBox="0 0 100 30" fill="currentColor">
+                    <path d="M0 0l15 25L30 0h-8l-7 12-7-12H0zm35 0v25h8V0h-8zm25 0l15 25L90 0h-8l-7 12-7-12H60z" />
+                </svg>
+                ),
+                'XIAOMI': (
+                <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+                    <rect x="2" y="2" width="20" height="20" rx="5" />
+                    <path d="M12 7v10h2v-8h2v8h2V7h-6zm-4 0v6H6V7H4v8h6V7H8z" fill="#fff"/>
+                </svg>
+                ),
+                'GOOGLE': (
+                <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z"/>
+                </svg>
+                ),
+                '平板類': <TabletIcon size={size} />,
+                '智慧手錶': <WatchIcon size={size} />,
+                '藍牙耳機': <HeadphonesIcon size={size} />
+            };
+            return logos[category] || <SmartphoneIcon size={size} />;
+        };
 
-            const format = (n) => "NT$ " + n.toLocaleString();
+        // --- 全系列資料庫 (基礎行情設定) ---
+        const INITIAL_MODELS = [
+        // 🍎 APPLE
+        { id: 'apple_15', brand: 'APPLE', name: 'iPhone 15', category: 'APPLE', colors: '黑、藍', variants: [ { cap: '128G', landmark: 21000, jasons: 21200, sogi: 21500 } ] },
+        { id: 'apple_16e', brand: 'APPLE', name: 'iPhone 16e', category: 'APPLE', colors: '黑、白', variants: [ { cap: '128G', landmark: 18000, jasons: 18200, sogi: 18500 }, { cap: '256G', landmark: 21500, jasons: 21700, sogi: 22000 } ] },
+        { id: 'apple_17', brand: 'APPLE', name: 'iPhone 17', category: 'APPLE', colors: '黑、白、霧藍、薰衣草紫、鼠尾草綠', variants: [ { cap: '256G', landmark: 33000, jasons: 33200, sogi: 33500 }, { cap: '512G', landmark: 40000, jasons: 40200, sogi: 40500 } ] },
+        { id: 'apple_17e', brand: 'APPLE', name: 'iPhone 17e', category: 'APPLE', colors: '黑、白、粉', variants: [ { cap: '256G', landmark: 22000, jasons: 22200, sogi: 22500 }, { cap: '512G', landmark: 26000, jasons: 26200, sogi: 26500 } ] },
+        { id: 'apple_17air', brand: 'APPLE', name: 'iPhone Air', category: 'APPLE', colors: '太空黑、雲白、淺金、天藍', variants: [ { cap: '256G', landmark: 32000, jasons: 32200, sogi: 32500 }, { cap: '512G', landmark: 39000, jasons: 39200, sogi: 39500 } ] },
+        { id: 'apple_17p', brand: 'APPLE', name: 'iPhone 17 Pro', category: 'APPLE', colors: '銀、宇宙橙、藏藍', variants: [ { cap: '256G', landmark: 39000, jasons: 39200, sogi: 39500 }, { cap: '512G', landmark: 46000, jasons: 46200, sogi: 46500 }, { cap: '1T', landmark: 53000, jasons: 53200, sogi: 53500 } ] },
+        { id: 'apple_17pm', brand: 'APPLE', name: 'iPhone 17 Pro Max', category: 'APPLE', colors: '銀、宇宙橙、藏藍', variants: [ { cap: '256G', landmark: 43000, jasons: 43200, sogi: 43500 }, { cap: '512G', landmark: 50000, jasons: 50200, sogi: 50500 }, { cap: '1T', landmark: 57000, jasons: 57200, sogi: 57500 }, { cap: '2T', landmark: 64000, jasons: 64200, sogi: 64500 } ] },
 
-            const Card = ({ item }) => (
-                <div className={`glass-card rounded-[4rem] p-12 mb-12 border-l-[25px] transition-all hover:scale-[1.02] ${item.brand === 'apple' ? 'border-slate-400' : 'border-blue-600'}`}>
-                    <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-10 gap-10">
-                        <div className="flex-1">
-                            <div className="flex items-center gap-6 mb-4">
-                                <h2 className="text-7xl md:text-8xl font-black italic tracking-tighter uppercase leading-none">{item.model}</h2>
-                                <span className="bg-yellow-500/20 text-yellow-500 px-6 py-2 rounded-2xl text-2xl font-bold border border-yellow-500/30">114-115 年度新品</span>
-                            </div>
-                            <div className="bg-blue-600/20 text-blue-400 px-8 py-4 rounded-[2rem] inline-block font-black text-3xl border border-blue-500/30 mb-6">🎨 官方指定色：{item.colors}</div>
-                            <p className="text-slate-400 text-3xl font-bold opacity-60">關鍵規格：{item.spec}</p>
-                        </div>
-                        <div className="text-right bg-black/40 p-12 rounded-[4rem] border border-white/10 min-w-[500px] shadow-2xl">
-                            <p className="text-slate-500 text-xl font-black mb-3 uppercase tracking-[0.5em] italic">店內特惠報價</p>
-                            <p className="text-[10rem] font-black text-blue-400 tracking-tighter price-glow leading-none">{format(item.store)}</p>
-                        </div>
-                    </div>
-                    <div className="grid grid-cols-3 gap-10 bg-black/50 rounded-[4rem] p-12 mb-10 border border-white/5 shadow-inner text-center">
-                        <div className="border-r border-white/10"><p className="text-red-500 font-black text-3xl mb-4 uppercase italic">地標行情</p><p className="text-7xl font-black">{item.landmark.toLocaleString()}</p></div>
-                        <div className="border-r border-white/10"><p className="text-green-500 font-black text-3xl mb-4 uppercase italic">傑昇行情</p><p className="text-7xl font-black">{(item.landmark-380).toLocaleString()}</p></div>
-                        <div><p className="text-orange-500 font-black text-3xl mb-4 uppercase italic">手機王</p><p className="text-7xl font-black">{(item.landmark+120).toLocaleString()}</p></div>
-                    </div>
-                    <div className="flex justify-between items-center bg-white/5 px-16 py-12 rounded-[3rem] border border-white/10 font-black text-5xl italic text-yellow-400">
-                        <span>市場最低參考：{(item.landmark-380).toLocaleString()}</span>
-                        <div className="flex gap-6">
-                            <span className="bg-green-600 px-16 py-6 rounded-[2.5rem] text-white shadow-[0_0_50px_rgba(34,197,94,0.5)] animate-pulse">現省超優惠</span>
-                            <span className="bg-slate-700 px-16 py-6 rounded-[2.5rem] text-white">銓展現貨</span>
-                        </div>
-                    </div>
-                </div>
+        // 🔵 ASUS
+        { id: 'asus_z12u', brand: 'ASUS', name: 'Zenfone 12 Ultra', category: 'ASUS', colors: '黑、白、綠', variants: [ { cap: '12G/256G', landmark: 30000, jasons: 30200, sogi: 30500 } ] },
+
+        // 🌈 GOOGLE
+        { id: 'google_9a5g', brand: 'GOOGLE', name: 'Pixel 9a 5G', category: 'GOOGLE', colors: '曜石黑、鳶尾紫 (128G 另有陶瓷米、莓果粉)', variants: [ { cap: '8G/128G', landmark: 13000, jasons: 13200, sogi: 13500 }, { cap: '8G/256G', landmark: 15000, jasons: 15200, sogi: 15500 } ] },
+        { id: 'google_10', brand: 'GOOGLE', name: 'Pixel 10', category: 'GOOGLE', colors: '曜石黑、靛藍色 (128G 另有香茅綠、冰霜紫)', variants: [ { cap: '12G/128G', landmark: 25000, jasons: 25200, sogi: 25500 }, { cap: '12G/256G', landmark: 28000, jasons: 28200, sogi: 28500 } ] },
+        { id: 'google_10p', brand: 'GOOGLE', name: 'Pixel 10 Pro', category: 'GOOGLE', colors: '曜石黑 (128G 另有月岩灰、陶瓷米；256G 另有綠玉色、月岩灰、陶瓷米)', variants: [ { cap: '16G/128G', landmark: 32000, jasons: 32200, sogi: 32500 }, { cap: '16G/256G', landmark: 35000, jasons: 35200, sogi: 35500 }, { cap: '16G/512G', landmark: 39000, jasons: 39200, sogi: 39500 } ] },
+        { id: 'google_10pxl', brand: 'GOOGLE', name: 'Pixel 10 Pro XL', category: 'GOOGLE', colors: '曜石黑、月岩灰 (256G 另有綠玉色、陶瓷米)', variants: [ { cap: '16G/256G', landmark: 38000, jasons: 38200, sogi: 38500 }, { cap: '16G/512G', landmark: 42000, jasons: 42200, sogi: 42500 } ] },
+        { id: 'google_10pfold', brand: 'GOOGLE', name: 'Pixel 10 Pro Fold', category: 'GOOGLE', colors: '月岩灰', variants: [ { cap: '16G/256G', landmark: 55000, jasons: 55200, sogi: 55500 }, { cap: '16G/512G', landmark: 59000, jasons: 59200, sogi: 59500 } ] },
+        { id: 'google_10a', brand: 'GOOGLE', name: 'Pixel 10a', category: 'GOOGLE', colors: '曜石黑、薰衣草紫、迷霧灰 (256G 另有草莓粉)', variants: [ { cap: '8G/128G', landmark: 15000, jasons: 15200, sogi: 15500 }, { cap: '8G/256G', landmark: 17000, jasons: 17200, sogi: 17500 } ] },
+
+        // Ⓜ️ MOTOROLA
+        { id: 'moto_g06', brand: 'MOTOROLA', name: 'g06', category: 'MOTOROLA', colors: '藍、橘', variants: [ { cap: '4G/64G', landmark: 4000, jasons: 4100, sogi: 4200 } ] },
+        { id: 'moto_edge70', brand: 'MOTOROLA', name: 'edge 70 fusion', category: 'MOTOROLA', colors: '綠、深藍、紫藍', variants: [ { cap: '8G/256G', landmark: 15000, jasons: 15200, sogi: 15500 } ] },
+
+        // 🟢 OPPO
+        { id: 'oppo_a6x', brand: 'OPPO', name: 'A6x 5G', category: 'OPPO', colors: '芋泥紫、莓果紫', variants: [ { cap: '4G/128G', landmark: 6000, jasons: 6100, sogi: 6200 } ] },
+        { id: 'oppo_a6s', brand: 'OPPO', name: 'A6s 5G', category: 'OPPO', colors: '可可棕、奶霜白', variants: [ { cap: '6G/128G', landmark: 8000, jasons: 8100, sogi: 8200 }, { cap: '8G/256G', landmark: 10000, jasons: 10200, sogi: 10500 } ] },
+        { id: 'oppo_r15f', brand: 'OPPO', name: 'Reno15 F', category: 'OPPO', colors: '蒼穹藍、極光藍', variants: [ { cap: '12G/256G', landmark: 11000, jasons: 11200, sogi: 11500 } ] },
+        { id: 'oppo_r15', brand: 'OPPO', name: 'Reno15', category: 'OPPO', colors: '蒼穹藍、極光白', variants: [ { cap: '12G/256G', landmark: 14000, jasons: 14200, sogi: 14500 }, { cap: '12G/512G', landmark: 16000, jasons: 16200, sogi: 16500 } ] },
+        { id: 'oppo_r15p', brand: 'OPPO', name: 'Reno15 Pro', category: 'OPPO', colors: '夜漠棕、暮光金', variants: [ { cap: '12G/256G', landmark: 18000, jasons: 18200, sogi: 18500 } ] },
+        { id: 'oppo_r15pm', brand: 'OPPO', name: 'Reno15 Pro Max', category: 'OPPO', colors: '夜漠棕、暮光金', variants: [ { cap: '12G/512G', landmark: 22000, jasons: 22200, sogi: 22500 } ] },
+        { id: 'oppo_x9', brand: 'OPPO', name: 'Find X9', category: 'OPPO', colors: '玄黑、赤月、鈦銀', variants: [ { cap: '12G/256G', landmark: 28000, jasons: 28200, sogi: 28500 } ] },
+        { id: 'oppo_x9p', brand: 'OPPO', name: 'Find X9 Pro', category: 'OPPO', colors: '曜鈦灰、霜月白', variants: [ { cap: '16G/512G', landmark: 35000, jasons: 35200, sogi: 35500 } ] },
+
+        // 🟡 REALME
+        { id: 'realme_c71', brand: 'REALME', name: 'C71', category: 'REALME', colors: '流光白、翠影綠', variants: [ { cap: '4G/128G', landmark: 5000, jasons: 5100, sogi: 5200 } ] },
+        { id: 'realme_gt7t', brand: 'REALME', name: 'GT 7T', category: 'REALME', colors: '凜冽黑、冰鋒藍、疾速黃', variants: [ { cap: '12G/256G', landmark: 16000, jasons: 16200, sogi: 16500 } ] },
+        { id: 'realme_15t', brand: 'REALME', name: '15 T', category: 'REALME', colors: '月輝銀、鈦空灰', variants: [ { cap: '8G/256G', landmark: 12000, jasons: 12200, sogi: 12500 } ] },
+        { id: 'realme_15p', brand: 'REALME', name: '15 Pro', category: 'REALME', colors: '流光銀、絲絨綠', variants: [ { cap: '12G/256G', landmark: 10000, jasons: 10200, sogi: 10500 } ] },
+        { id: 'realme_16p', brand: 'REALME', name: '16 Pro', category: 'REALME', colors: '純粹紫、極簡灰', variants: [ { cap: '12G/256G', landmark: 13000, jasons: 13200, sogi: 13500 } ] },
+
+        // 🌌 SAMSUNG
+        { id: 'sam_a07', brand: 'SAMSUNG', name: 'Galaxy A07', category: 'SAMSUNG', colors: '裸光紫、酷潮黑', variants: [ { cap: '4G/128G', landmark: 5000, jasons: 5100, sogi: 5200 } ] },
+        { id: 'sam_a17', brand: 'SAMSUNG', name: 'Galaxy A17', category: 'SAMSUNG', colors: '逆襲黑、快閃灰、追浪藍', variants: [ { cap: '6G/128G', landmark: 6000, jasons: 6100, sogi: 6200 }, { cap: '8G/128G', landmark: 7000, jasons: 7100, sogi: 7200 } ] },
+        { id: 'sam_a36', brand: 'SAMSUNG', name: 'Galaxy A36 5G', category: 'SAMSUNG', colors: '秘境黑、滑雪白、極光綠、夜光紫', variants: [ { cap: '8G/128G', landmark: 10000, jasons: 10200, sogi: 10500 } ] },
+        { id: 'sam_a37', brand: 'SAMSUNG', name: 'Galaxy A37', category: 'SAMSUNG', colors: '水洗綠、甜酷紫、潮流灰、極簡白', variants: [ { cap: '8G/256G', landmark: 12000, jasons: 12200, sogi: 12500 } ] },
+        { id: 'sam_a56', brand: 'SAMSUNG', name: 'Galaxy A56 5G', category: 'SAMSUNG', colors: '秘境黑、滑雪白、極光綠、夜光紫', variants: [ { cap: '8G/256G', landmark: 13000, jasons: 13200, sogi: 13500 }, { cap: '12G/256G', landmark: 15000, jasons: 15200, sogi: 15500 } ] },
+        { id: 'sam_a57', brand: 'SAMSUNG', name: 'Galaxy A57', category: 'SAMSUNG', colors: '雅痞藍、休閒藍、莫蘭紫 (12G 另有工裝灰)', variants: [ { cap: '8G/256G', landmark: 14000, jasons: 14200, sogi: 14500 }, { cap: '12G/256G', landmark: 16000, jasons: 16200, sogi: 16500 } ] },
+        { id: 'sam_s25e', brand: 'SAMSUNG', name: 'Galaxy S25 Edge', category: 'SAMSUNG', colors: '鈦輕銀、鈦輕藍、鈦輕黑', variants: [ { cap: '12G/256G', landmark: 32000, jasons: 32200, sogi: 32500 }, { cap: '12G/512G', landmark: 36000, jasons: 36200, sogi: 36500 } ] },
+        { id: 'sam_s25', brand: 'SAMSUNG', name: 'Galaxy S25', category: 'SAMSUNG', colors: '深海藍、冰藍、迷綠、炫灰', variants: [ { cap: '12G/256G', landmark: 28000, jasons: 28200, sogi: 28500 } ] },
+        { id: 'sam_s25p', brand: 'SAMSUNG', name: 'Galaxy S25+', category: 'SAMSUNG', colors: '深海藍、冰藍、迷綠、炫灰', variants: [ { cap: '12G/256G', landmark: 34000, jasons: 34200, sogi: 34500 }, { cap: '12G/512G', landmark: 38000, jasons: 38200, sogi: 38500 } ] },
+        { id: 'sam_s25u', brand: 'SAMSUNG', name: 'Galaxy S25 Ultra', category: 'SAMSUNG', colors: '鈦空藍、鈦灰、鈦銀、鈦黑', variants: [ { cap: '12G/256G', landmark: 42000, jasons: 42200, sogi: 42500 }, { cap: '12G/512G', landmark: 46000, jasons: 46200, sogi: 46500 } ] },
+        { id: 'sam_s26', brand: 'SAMSUNG', name: 'Galaxy S26', category: 'SAMSUNG', colors: '漫遊黑、漫遊藍、漫遊紫、漫遊白', variants: [ { cap: '12G/256G', landmark: 30000, jasons: 30200, sogi: 30500 }, { cap: '12G/512G', landmark: 34000, jasons: 34200, sogi: 34500 } ] },
+        { id: 'sam_s26p', brand: 'SAMSUNG', name: 'Galaxy S26+', category: 'SAMSUNG', colors: '漫遊黑、漫遊藍、漫遊紫、漫遊白', variants: [ { cap: '12G/256G', landmark: 36000, jasons: 36200, sogi: 36500 }, { cap: '12G/512G', landmark: 40000, jasons: 40200, sogi: 40500 } ] },
+        { id: 'sam_s26u', brand: 'SAMSUNG', name: 'Galaxy S26 Ultra', category: 'SAMSUNG', colors: '漫遊黑、漫遊藍、漫遊紫、漫遊白', variants: [ { cap: '12G/256G', landmark: 44000, jasons: 44200, sogi: 44500 }, { cap: '12G/512G', landmark: 48000, jasons: 48200, sogi: 48500 } ] },
+        { id: 'sam_flip7', brand: 'SAMSUNG', name: 'Galaxy Z Flip7', category: 'SAMSUNG', colors: '海影藍、墨夜黑、輕緋紅', variants: [ { cap: '12G/256G', landmark: 32000, jasons: 32200, sogi: 32500 }, { cap: '12G/512G', landmark: 36000, jasons: 36200, sogi: 36500 } ] },
+        { id: 'sam_fold7', brand: 'SAMSUNG', name: 'Galaxy Z Fold7', category: 'SAMSUNG', colors: '海影藍、墨夜黑、淬霧銀', variants: [ { cap: '12G/256G', landmark: 55000, jasons: 55200, sogi: 55500 }, { cap: '12G/512G', landmark: 59000, jasons: 59200, sogi: 59500 } ] },
+        { id: 'sam_trifold', brand: 'SAMSUNG', name: 'Galaxy Z TriFold', category: 'SAMSUNG', colors: '瀚夜黑', variants: [ { cap: '16G/512G', landmark: 85000, jasons: 85200, sogi: 85500 } ] },
+
+        // 🔪 SHARP
+        { id: 'sharp_r10', brand: 'SHARP', name: 'AQUOS R10', category: 'SHARP', colors: '晶鑽米', variants: [ { cap: '12G/512G', landmark: 28000, jasons: 28200, sogi: 28500 } ] },
+        { id: 'sharp_sense10', brand: 'SHARP', name: 'AQUOS Sense 10', category: 'SHARP', colors: '布魯藍、冰島青、米蘭粉', variants: [ { cap: '8G/256G', landmark: 14000, jasons: 14200, sogi: 14500 } ] },
+        { id: 'sharp_wish5', brand: 'SHARP', name: 'AQUOS wish5', category: 'SHARP', colors: '蜜果藍 (6G 另有霧感黑；8G 另有甜粉紅)', variants: [ { cap: '6G/128G', landmark: 7000, jasons: 7100, sogi: 7200 }, { cap: '8G/256G', landmark: 9000, jasons: 9100, sogi: 9200 } ] },
+        { id: 'sharp_wish5s', brand: 'SHARP', name: 'AQUOS wish5s', category: 'SHARP', colors: '宇宙藍、琥珀銅', variants: [ { cap: '8G/256G', landmark: 10000, jasons: 10200, sogi: 10500 } ] },
+
+        // 🟣 VIVO
+        { id: 'vivo_y04', brand: 'VIVO', name: 'Y04', category: 'VIVO', colors: '綠、紫', variants: [ { cap: '4G/128G', landmark: 4000, jasons: 4100, sogi: 4200 } ] },
+        { id: 'vivo_y05', brand: 'VIVO', name: 'Y05', category: 'VIVO', colors: '曜石黑、香檳金', variants: [ { cap: '4G/128G', landmark: 4500, jasons: 4600, sogi: 4700 } ] },
+        { id: 'vivo_y21', brand: 'VIVO', name: 'Y21', category: 'VIVO', colors: '極夜黑、流沙金', variants: [ { cap: '6G/128G', landmark: 6000, jasons: 6100, sogi: 6200 } ] },
+        { id: 'vivo_y29s', brand: 'VIVO', name: 'Y29s', category: 'VIVO', colors: '銀、綠', variants: [ { cap: '6G/128G', landmark: 7000, jasons: 7100, sogi: 7200 } ] },
+        { id: 'vivo_y31', brand: 'VIVO', name: 'Y31', category: 'VIVO', colors: '丹砂紅、青黛綠', variants: [ { cap: '8G/256G', landmark: 8000, jasons: 8100, sogi: 8200 } ] },
+        { id: 'vivo_v60', brand: 'VIVO', name: 'V60', category: 'VIVO', colors: '紫、藍、灰', variants: [ { cap: '12G/256G', landmark: 15000, jasons: 15200, sogi: 15500 } ] },
+        { id: 'vivo_v60l', brand: 'VIVO', name: 'V60 Lite', category: 'VIVO', colors: '曜夜黑、元氣粉、鈦霧藍', variants: [ { cap: '8G/256G', landmark: 11000, jasons: 11200, sogi: 11500 }, { cap: '12G/256G', landmark: 13000, jasons: 13200, sogi: 13500 } ] },
+        { id: 'vivo_v70', brand: 'VIVO', name: 'V70', category: 'VIVO', colors: '星曜黑、艷陽金、暮雲灰', variants: [ { cap: '12G/256G', landmark: 16000, jasons: 16200, sogi: 16500 }, { cap: '12G/512G', landmark: 19000, jasons: 19200, sogi: 19500 } ] },
+        { id: 'vivo_v70fe', brand: 'VIVO', name: 'V70 FE', category: 'VIVO', colors: '霧銀、夜藍、花紫', variants: [ { cap: '8G/256G', landmark: 13000, jasons: 13200, sogi: 13500 }, { cap: '12G/256G', landmark: 15000, jasons: 15200, sogi: 15500 } ] },
+        { id: 'vivo_x300', brand: 'VIVO', name: 'X300', category: 'VIVO', colors: '星辰黑、晨曦粉、晴空藍、山嵐紫', variants: [ { cap: '12G/256G', landmark: 26000, jasons: 26200, sogi: 26500 } ] },
+        { id: 'vivo_x300p', brand: 'VIVO', name: 'X300 Pro', category: 'VIVO', colors: '星辰黑、沙漠棕、晴空藍', variants: [ { cap: '16G/512G', landmark: 34000, jasons: 34200, sogi: 34500 } ] },
+
+        // 🟠 XIAOMI
+        { id: 'xiao_r15', brand: 'XIAOMI', name: 'Redmi 15 5G', category: 'XIAOMI', colors: '午夜黑、鈦灰色、漣漪綠', variants: [ { cap: '4G/128G', landmark: 6000, jasons: 6100, sogi: 6200 } ] },
+        { id: 'xiao_r15c', brand: 'XIAOMI', name: 'Redmi 15C', category: 'XIAOMI', colors: '月光藍、午夜黑、暮光橙', variants: [ { cap: '4G/128G', landmark: 4000, jasons: 4100, sogi: 4200 } ] },
+        { id: 'xiao_rn15pp', brand: 'XIAOMI', name: 'Redmi Note 15 Pro+ 5G', category: 'XIAOMI', colors: '玄夜黑、冰川藍、摩卡棕', variants: [ { cap: '12G/256G', landmark: 13000, jasons: 13200, sogi: 13500 } ] },
+        { id: 'xiao_15t', brand: 'XIAOMI', name: '15T', category: 'XIAOMI', colors: '黑、灰、玫瑰金', variants: [ { cap: '12G/256G', landmark: 15000, jasons: 15200, sogi: 15500 }, { cap: '12G/512G', landmark: 18000, jasons: 18200, sogi: 18500 } ] },
+        { id: 'xiao_15tp', brand: 'XIAOMI', name: '15T Pro', category: 'XIAOMI', colors: '黑、灰、摩卡金', variants: [ { cap: '12G/512G', landmark: 20000, jasons: 20200, sogi: 20500 } ] },
+        { id: 'xiao_17', brand: 'XIAOMI', name: '17 5G', category: 'XIAOMI', colors: '黑、探境綠、冰融藍、雪山粉', variants: [ { cap: '12G/512G', landmark: 28000, jasons: 28200, sogi: 28500 } ] },
+
+        // 📝 平板類
+        { id: 'ipad11_25', brand: 'APPLE', name: 'iPad 11.0 (2025)', category: '平板類', colors: '銀、藍、黃、粉紅', variants: [ { cap: '6G/128G', landmark: 12900, jasons: 13200, sogi: 13500 }, { cap: '6G/256G', landmark: 16900, jasons: 17200, sogi: 17500 } ] },
+        { id: 'ipad_air11_25', brand: 'APPLE', name: 'iPad Air 11.0 (2025)', category: '平板類', colors: '灰、藍、星光、紫', variants: [ { cap: '8G/128G', landmark: 17900, jasons: 18200, sogi: 18500 }, { cap: '8G/256G', landmark: 21900, jasons: 22200, sogi: 22500 } ] },
+        { id: 'ipad_air11_26', brand: 'APPLE', name: 'iPad Air 11.0 (2026)', category: '平板類', colors: '灰、藍、星光、紫', variants: [ { cap: '12G/128G', landmark: 19900, jasons: 20200, sogi: 20500 }, { cap: '12G/256G', landmark: 23900, jasons: 24200, sogi: 24500 } ] },
+        { id: 'ipad_air13_25', brand: 'APPLE', name: 'iPad Air 13.0 (2025)', category: '平板類', colors: '灰、藍、星光、紫', variants: [ { cap: '8G/128G', landmark: 23900, jasons: 24200, sogi: 24500 }, { cap: '8G/256G', landmark: 27900, jasons: 28200, sogi: 28500 } ] },
+        { id: 'ipad_air13_26', brand: 'APPLE', name: 'iPad Air 13.0 (2026)', category: '平板類', colors: '灰、藍、星光、紫', variants: [ { cap: '12G/128G', landmark: 25900, jasons: 26200, sogi: 26500 }, { cap: '12G/256G', landmark: 29900, jasons: 30200, sogi: 30500 } ] },
+        { id: 'ipad_pro11_m5', brand: 'APPLE', name: 'iPad Pro 11.0 (M5)', category: '平板類', colors: '黑、銀', variants: [ { cap: '12G/256G', landmark: 32900, jasons: 33200, sogi: 33500 }, { cap: '12G/512G', landmark: 39900, jasons: 40200, sogi: 40500 } ] },
+        { id: 'ipad_pro13_m5', brand: 'APPLE', name: 'iPad Pro 13.0 (M5)', category: '平板類', colors: '黑、銀', variants: [ { cap: '12G/256G', landmark: 42900, jasons: 43200, sogi: 43500 }, { cap: '12G/512G', landmark: 49900, jasons: 50200, sogi: 50500 } ] },
+        { id: 'moto_pad60_neo', brand: 'MOTOROLA', name: 'pad 60 NEO 5G', category: '平板類', colors: '綠', variants: [ { cap: '8G/128G', landmark: 8000, jasons: 8200, sogi: 8500 } ] },
+        { id: 'moto_pad60_lite', brand: 'MOTOROLA', name: 'pad 60 LITE Wi-Fi', category: '平板類', colors: '灰', variants: [ { cap: '4G/128G', landmark: 5000, jasons: 5200, sogi: 5500 } ] },
+        { id: 'oppo_pad_se', brand: 'OPPO', name: 'Pad SE WiFi', category: '平板類', colors: '星光銀', variants: [ { cap: '4G/128G', landmark: 6000, jasons: 6200, sogi: 6500 } ] },
+        { id: 'sam_tab_a11', brand: 'SAMSUNG', name: 'Galaxy Tab A11', category: '平板類', colors: '新創灰、躍進銀', variants: [ { cap: '4G/64G', landmark: 5500, jasons: 5700, sogi: 6000 } ] },
+        { id: 'sam_tab_a11_plus', brand: 'SAMSUNG', name: 'Galaxy Tab A11+', category: '平板類', colors: '新創灰、躍進銀', variants: [ { cap: '6G/128G', landmark: 7500, jasons: 7700, sogi: 8000 } ] },
+        { id: 'sam_tab_s10_fe', brand: 'SAMSUNG', name: 'Galaxy Tab S10 FE', category: '平板類', colors: '天幕藍、營火灰、流星銀', variants: [ { cap: '8G/128G', landmark: 12500, jasons: 12700, sogi: 13000 } ] },
+        { id: 'sam_tab_s10_lite', brand: 'SAMSUNG', name: 'Galaxy Tab S10 Lite', category: '平板類', colors: '酷玩灰、出色紅、潮炫銀', variants: [ { cap: '6G/128G', landmark: 10500, jasons: 10700, sogi: 11000 } ] },
+        { id: 'sam_tab_s11', brand: 'SAMSUNG', name: 'Galaxy Tab S11', category: '平板類', colors: '薄霧灰、薄岩銀', variants: [ { cap: '12G/128G', landmark: 20500, jasons: 20700, sogi: 21000 } ] },
+        { id: 'sam_tab_s11_ultra', brand: 'SAMSUNG', name: 'Galaxy Tab S11 Ultra', category: '平板類', colors: '薄霧灰、薄岩銀', variants: [ { cap: '12G/256G', landmark: 35500, jasons: 35700, sogi: 36000 } ] },
+        { id: 'xiao_redmi_pad2_pro', brand: 'XIAOMI', name: 'Redmi Pad 2 Pro 5G', category: '平板類', colors: '石墨灰、星光銀', variants: [ { cap: '8G/256G', landmark: 9500, jasons: 9700, sogi: 10000 } ] },
+        { id: 'xiao_redmi_pad2', brand: 'XIAOMI', name: 'Redmi Pad 2 LTE', category: '平板類', colors: '石墨灰、薄荷綠', variants: [ { cap: '8G/256G', landmark: 7500, jasons: 7700, sogi: 8000 } ] },
+
+        // ⌚ 智慧手錶 (Apple Watch)
+        { id: 'aw_se3', brand: 'APPLE', name: 'Apple Watch SE 3', category: '智慧手錶', colors: '鋁金屬：午夜色、星光色', variants: [ { cap: '40mm GPS (64G)', landmark: 7500, jasons: 7700, sogi: 7900 }, { cap: '44mm GPS (64G)', landmark: 8500, jasons: 8700, sogi: 8900 }, { cap: '40mm LTE (64G)', landmark: 9000, jasons: 9200, sogi: 9500 }, { cap: '44mm LTE (64G)', landmark: 10000, jasons: 10200, sogi: 10500 } ] },
+        { id: 'aw_s11', brand: 'APPLE', name: 'Apple Watch Series 11', category: '智慧手錶', colors: '鋁金屬(曜石黑/玫瑰金/銀/太空灰) / 鈦金屬(石瓦/金/原色-限LTE)', variants: [ { cap: '42mm GPS (64G)', landmark: 12500, jasons: 12700, sogi: 12900 }, { cap: '46mm GPS (64G)', landmark: 13500, jasons: 13700, sogi: 13900 }, { cap: '42mm LTE (64G)', landmark: 15500, jasons: 15700, sogi: 15900 }, { cap: '46mm LTE (64G)', landmark: 16500, jasons: 16700, sogi: 16900 } ] },
+        { id: 'aw_u3', brand: 'APPLE', name: 'Apple Watch Ultra 3', category: '智慧手錶', colors: '鈦金屬：黑色、原色', variants: [ { cap: '49mm LTE (64G)', landmark: 26500, jasons: 26700, sogi: 26900 } ] },
+
+        // 🎧 藍牙耳機 (AirPods)
+        { id: 'ap_pro3', brand: 'APPLE', name: 'AirPods Pro (第3代)', category: '藍牙耳機', colors: '白', variants: [ { cap: '標準', landmark: 6900, jasons: 7100, sogi: 7400 } ] },
+        { id: 'ap_4', brand: 'APPLE', name: 'AirPods 4', category: '藍牙耳機', colors: '白', variants: [ { cap: '標準', landmark: 4200, jasons: 4300, sogi: 4500 } ] },
+        { id: 'ap_4_anc', brand: 'APPLE', name: 'AirPods 4 主動式降噪款', category: '藍牙耳機', colors: '白', variants: [ { cap: '標準', landmark: 5500, jasons: 5700, sogi: 5900 } ] },
+        ];
+
+        function App() {
+            // 把靜態陣列轉為 State 狀態，同時為每個變體預設加上 offset: 0
+            const [models, setModels] = useState(() => 
+                INITIAL_MODELS.map(m => ({
+                    ...m, 
+                    variants: m.variants.map(v => ({ ...v, offset: 0 }))
+                }))
             );
+            
+            // 本機暫存的加碼控制
+            const [globalMargin, setGlobalMargin] = useState(800); 
+            const [filter, setFilter] = useState('APPLE');
+            const [currentTime, setCurrentTime] = useState(new Date());
+
+            useEffect(() => {
+                const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+                return () => clearInterval(timer);
+            }, []);
+
+            // 處理個別機型調價的函數 (安全防呆，重整即消失)
+            const updateIndividualOffset = (modelId, variantIndex, change) => {
+                setModels(prev => prev.map(m => {
+                    if (m.id === modelId) {
+                        const newVariants = [...m.variants];
+                        newVariants[variantIndex] = {
+                            ...newVariants[variantIndex],
+                            offset: (newVariants[variantIndex].offset || 0) + change
+                        };
+                        return { ...m, variants: newVariants };
+                    }
+                    return m;
+                }));
+            };
+
+            const filteredModels = useMemo(() => {
+                return models.filter(m => m.category === filter);
+            }, [models, filter]);
+
+            const categories = ['APPLE', 'SAMSUNG', 'OPPO', 'VIVO', 'XIAOMI', 'GOOGLE', 'ASUS', 'MOTOROLA', 'HTC', 'SHARP', 'REALME', '平板類', '智慧手錶', '藍牙耳機'];
 
             return (
-                <div className="max-w-[3400px] mx-auto p-12">
-                    <header className="flex flex-col xl:flex-row justify-between items-center mb-24 border-b border-white/10 pb-20 gap-12 sticky top-0 bg-[#020617]/95 backdrop-blur-3xl z-50 py-16 px-12 rounded-b-[6rem] shadow-2xl">
-                        <div className="flex items-center gap-14">
-                            <div className="bg-gradient-to-br from-blue-600 to-indigo-700 p-12 rounded-[4rem] shadow-2xl shadow-blue-500/50 hover:rotate-12 transition-transform">
-                                <svg width="100" height="100" fill="white" viewBox="0 0 24 24"><path d="M21 3H3C1.9 3 1 3.9 1 5v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
-                            </div>
-                            <div>
-                                <h1 className="text-[12rem] font-black italic tracking-tighter uppercase leading-none">LIVE <span className="text-blue-500 underline decoration-[30px] decoration-blue-500/20 underline-offset-[20px]">戰情室</span></h1>
-                                <p className="text-slate-500 font-black text-5xl mt-12 tracking-widest flex items-center gap-10 italic opacity-80"><span className="w-10 h-10 bg-green-500 rounded-full animate-ping"></span> 雲端數據已連通 | 更新時間：{syncTime}</p>
-                            </div>
+                <div className="h-screen w-screen bg-[#020617] text-slate-100 flex flex-col font-sans overflow-hidden">
+                
+                {/* 頂部管理面板 */}
+                <header className="flex flex-col lg:flex-row justify-between items-center bg-slate-900 border-b border-slate-800 p-4 shadow-2xl z-30 gap-4 lg:gap-0">
+                    <div className="flex items-center gap-4">
+                        <div className="bg-blue-600 p-2.5 rounded-xl text-white shadow-lg">
+                            <DatabaseIcon />
                         </div>
-                        <nav className="flex flex-wrap justify-center gap-10 bg-slate-900/80 p-8 rounded-[5rem] border border-white/10 shadow-3xl">
-                            {['apple', 'samsung', 'google', 'vivo'].map(b => (
-                                <button key={b} onClick={() => setActiveBrand(b)} className={`px-24 py-12 rounded-[4rem] text-6xl font-black uppercase transition-all ${activeBrand === b ? 'bg-blue-600 text-white scale-110 shadow-[0_30px_60px_rgba(37,99,235,0.4)]' : 'text-slate-500 hover:text-white'}`}>{b}</button>
-                            ))}
-                        </nav>
-                        <div className="text-right hidden xl:block min-w-[550px]">
-                            <p className="text-slate-700 font-black tracking-[1.5em] text-3xl mb-8 uppercase italic opacity-40">SINCE 1989</p>
-                            <h2 className="text-[9rem] font-black text-white tracking-tighter leading-none">銓 / 昇 展 通 信</h2>
+                        <div>
+                            <h1 className="text-xl font-black tracking-tight text-white uppercase flex items-center gap-2">全系列戰情中心</h1>
+                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest leading-none mt-1 italic">Professional Command (Display & Tweak Mode)</p>
                         </div>
-                    </header>
-                    
-                    <main className="main-grid grid grid-cols-1 gap-20 px-8">
-                        {phoneData.filter(i => i.brand === activeBrand).map((item, idx) => <Card key={idx} item={item} />)}
-                    </main>
+                    </div>
 
-                    <footer className="mt-60 p-40 bg-slate-950/95 rounded-[12rem] flex flex-col md:flex-row justify-between items-center gap-12 border-t border-white/5 opacity-60 hover:opacity-100 transition-opacity">
-                        <div className="text-left">
-                            <h3 className="text-[10rem] font-black text-white mb-8 tracking-widest">銓 / 昇 展 通 信</h3>
-                            <p className="text-6xl text-slate-400 font-bold italic tracking-widest uppercase">Professional Communication ‧ Since 1989</p>
+                    <div className="flex items-center gap-6 bg-blue-500/5 px-6 lg:px-10 py-2 rounded-2xl border border-blue-500/20 shadow-inner w-full lg:w-auto justify-center">
+                        <div className="text-center">
+                            <span className="text-[9px] font-black text-blue-400 uppercase mb-1 block">全店統一加碼控制 (本機暫存)</span>
+                            <div className="flex items-center gap-4">
+                                <button onClick={() => setGlobalMargin(globalMargin - 100)} className="w-8 h-8 flex items-center justify-center bg-slate-800 hover:bg-slate-700 rounded-full text-slate-400 border border-white/5 active:scale-90 transition-all">－</button>
+                                <span className="text-3xl lg:text-4xl font-mono font-black text-emerald-400 w-32 lg:w-44 text-center tracking-tighter">
+                                +${globalMargin.toLocaleString()}
+                                </span>
+                                <button onClick={() => setGlobalMargin(globalMargin + 100)} className="w-8 h-8 flex items-center justify-center bg-blue-600 hover:bg-blue-500 rounded-full text-white shadow-lg active:scale-90 transition-all">＋</button>
+                            </div>
                         </div>
-                        <div className="text-right text-slate-500 font-black text-7xl tracking-widest space-y-6">
-                            <p>桃園市龜山區中興路 402 號</p>
-                            <p>服務電話：03-3590858 | 統一編號：80089553</p>
+                    </div>
+
+                    <div className="hidden lg:flex items-center gap-4 text-slate-400 font-mono text-base pr-5">
+                        {currentTime.toLocaleTimeString('zh-TW', { hour12: false })}
+                    </div>
+                </header>
+
+                {/* 品牌導覽列 (智慧多排折行版) */}
+                <div className="bg-slate-900/50 border-b border-slate-800 p-3 lg:p-4 backdrop-blur-md z-20">
+                    <div className="flex flex-wrap justify-center gap-x-2 gap-y-3 lg:gap-x-3 lg:gap-y-4 max-w-7xl mx-auto px-2">
+                        {categories.map(cat => (
+                        <button 
+                            key={cat} onClick={() => setFilter(cat)} 
+                            className={`px-4 lg:px-6 py-2 lg:py-2.5 rounded-xl text-[12px] font-black transition-all flex items-center justify-center gap-2 ${filter === cat ? 'bg-white text-black shadow-2xl scale-110 z-10' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/80 bg-slate-900/60 border border-slate-800/60 shadow-sm'}`}
+                        >
+                            <BrandLogo category={cat} size={filter === cat ? 18 : 16} />
+                            {cat}
+                        </button>
+                        ))}
+                    </div>
+                </div>
+
+                {/* 標題列 (手機版自動隱藏，大螢幕顯示) */}
+                <div className="hidden lg:grid bg-slate-950/80 px-8 py-3 border-b border-slate-800 grid-cols-12 gap-4 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] sticky top-0 z-10 shadow-lg">
+                    <div className="col-span-3 px-6 text-center">型號 / 顏色 (置中跨區)</div>
+                    <div className="col-span-1 text-center">容量</div>
+                    <div className="col-span-2 text-center text-slate-500 font-bold">市場行情 (地/傑/王)</div>
+                    <div className="col-span-4 text-center text-blue-400 font-black underline decoration-blue-900/50 italic">● 銓展最終核定價</div>
+                    <div className="col-span-2 text-center text-slate-700 italic">個別微調 (暫時)</div>
+                </div>
+
+                {/* 主數據區塊 */}
+                <main className="flex-1 p-2 lg:p-4 overflow-y-auto custom-scrollbar bg-slate-950/10">
+                    <div className="flex flex-col gap-2 max-w-[2200px] mx-auto pb-12">
+                    {filteredModels.length > 0 ? (
+                        filteredModels.map((m) => (
+                        <div key={m.id} className="bg-slate-900/30 border border-slate-800/50 rounded-xl p-3 lg:p-4 flex flex-col gap-2 relative group hover:bg-slate-900/50 transition-all border-l-4 border-l-blue-600/20 shadow-sm overflow-hidden">
+
+                            {m.variants.map((v, idx) => {
+                            // 計算這台手機最終價格 (地標 + 全局加碼 + 個別微調)
+                            const chuanPrice = v.landmark + globalMargin + (v.offset || 0);
+                            
+                            return (
+                                <div key={`${m.id}-${idx}`} className="flex flex-col lg:grid lg:grid-cols-12 gap-4 items-center p-4 lg:p-3 rounded-lg hover:bg-black/40 transition-all border-b border-white/[0.02] min-h-[140px]">
+                                
+                                {/* 置中跨區 + 顏色 */}
+                                <div className="w-full lg:col-span-3 flex flex-col items-center justify-center h-full px-2 lg:px-6 lg:border-r border-white/5 text-center min-h-[100px] lg:min-h-[120px]">
+                                    {idx === 0 ? (
+                                    <div className="w-full flex flex-col items-center justify-center gap-3 py-2">
+                                        <div className="flex flex-col items-center gap-1.5">
+                                            <div className="flex items-center gap-2">
+                                                <BrandLogo category={m.category} size={14} />
+                                                <span className="text-[9px] font-black uppercase tracking-[0.2em] text-blue-400/80">{m.brand}</span>
+                                            </div>
+                                            <span className="text-2xl lg:text-3xl font-black text-white uppercase tracking-tighter leading-tight group-hover:text-blue-400 transition-colors block break-words">
+                                                {m.name}
+                                            </span>
+                                        </div>
+                                        <div className="w-16 h-0.5 bg-blue-600/20 rounded-full"></div>
+                                        <p className="text-[clamp(0.85rem,1.5vw,1.1rem)] text-slate-400 font-bold tracking-wide leading-relaxed break-words w-full px-2">
+                                            <span className="text-blue-500/80 font-black mr-1">顏色：</span>
+                                            {m.colors}
+                                        </p>
+                                    </div>
+                                    ) : (
+                                    <div className="flex flex-col items-center gap-1 opacity-20 group-hover:opacity-40 transition-opacity">
+                                        <ChevronRightIcon size={24} className="text-slate-500 rotate-90 lg:rotate-90"/>
+                                        <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">同一機型系列</span>
+                                    </div>
+                                    )}
+                                </div>
+
+                                {/* 容量 */}
+                                <div className="w-full lg:col-span-1 text-center">
+                                    <span className="bg-slate-800 text-slate-200 px-6 py-2 lg:px-4 rounded-xl font-black text-[clamp(1rem,2vw,1.25rem)] border border-slate-700 shadow-inner group-hover:bg-slate-700 transition-colors inline-block w-full lg:w-auto">
+                                        {v.cap}
+                                    </span>
+                                </div>
+                                
+                                {/* 市場行情 */}
+                                <div className="w-full lg:col-span-2 flex flex-row lg:flex-col items-center justify-center gap-2 lg:gap-1 lg:border-x border-white/5 px-0 lg:px-4">
+                                    <div className="flex-1 lg:w-full flex flex-col lg:flex-row justify-between items-center py-1.5 lg:py-0.5 px-2 lg:px-3 hover:bg-red-500/5 rounded transition-colors bg-black/20 lg:bg-transparent">
+                                        <span className="text-[10px] lg:text-[9px] text-red-500/60 font-black">地標</span>
+                                        <p className="text-lg lg:text-xl font-mono font-black text-red-500 leading-none">${v.landmark.toLocaleString()}</p>
+                                    </div>
+                                    <div className="flex-1 lg:w-full flex flex-col lg:flex-row justify-between items-center py-1.5 lg:py-0.5 px-2 lg:px-3 hover:bg-emerald-500/5 rounded transition-colors bg-black/20 lg:bg-transparent">
+                                        <span className="text-[10px] lg:text-[9px] text-emerald-500/60 font-black">傑昇</span>
+                                        <p className="text-lg lg:text-xl font-mono font-bold text-emerald-500 leading-none">${v.jasons.toLocaleString()}</p>
+                                    </div>
+                                    <div className="flex-1 lg:w-full flex flex-col lg:flex-row justify-between items-center py-1.5 lg:py-0.5 px-2 lg:px-3 lg:border-t border-white/5 lg:mt-1 lg:pt-1 hover:bg-orange-500/5 rounded transition-colors bg-black/20 lg:bg-transparent">
+                                        <span className="text-[10px] lg:text-[9px] text-orange-500/60 font-black">手機王</span>
+                                        <p className="text-lg lg:text-xl font-mono font-bold text-orange-500 leading-none">${v.sogi.toLocaleString()}</p>
+                                    </div>
+                                </div>
+
+                                {/* 銓展售價 */}
+                                <div className="w-full lg:col-span-4 text-center bg-blue-600/5 py-6 lg:py-8 rounded-2xl border border-blue-500/20 shadow-xl lg:mx-4 transform group-hover:scale-105 transition-transform duration-300 relative overflow-hidden">
+                                    <div className="absolute top-0 right-0 p-1 opacity-5"><ZapIcon size={24}/></div>
+                                    <p className="text-[clamp(2.25rem,4vw,3rem)] font-mono font-black text-white leading-none tracking-tighter drop-shadow-[0_0_10px_rgba(255,255,255,0.2)] group-hover:text-emerald-400 transition-colors">
+                                        ${chuanPrice.toLocaleString()}
+                                    </p>
+                                </div>
+
+                                {/* 單機型微調控制 */}
+                                <div className="w-full lg:col-span-2 flex flex-col lg:flex-row items-center justify-center gap-2 lg:gap-4 lg:border-l border-white/5 px-4 pt-2 lg:pt-0">
+                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest lg:hidden">單機型優惠微調 (暫時)</span>
+                                    <div className="flex items-center gap-4">
+                                        <button onClick={() => updateIndividualOffset(m.id, idx, -100)} className="w-10 h-10 flex items-center justify-center bg-slate-800 rounded-lg text-slate-400 hover:text-white border border-white/5 active:scale-90 transition-all shadow-lg">
+                                            <MinusIcon size={20}/>
+                                        </button>
+                                        <div className="text-center w-16">
+                                            <p className={`text-xl font-mono font-black ${v.offset > 0 ? 'text-emerald-400' : v.offset < 0 ? 'text-red-400' : 'text-slate-700'}`}>
+                                                {v.offset >= 0 ? '+' : ''}{(v.offset || 0).toLocaleString()}
+                                            </p>
+                                        </div>
+                                        <button onClick={() => updateIndividualOffset(m.id, idx, 100)} className="w-10 h-10 flex items-center justify-center bg-slate-800 rounded-lg text-slate-400 hover:text-white border border-white/5 active:scale-90 transition-all shadow-lg">
+                                            <PlusIcon size={20}/>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                </div>
+                            );
+                            })}
                         </div>
-                    </footer>
+                        ))
+                    ) : (
+                        <div className="h-64 flex items-center justify-center text-slate-700 font-black text-xl border-2 border-dashed border-slate-800 rounded-3xl uppercase tracking-widest">
+                            目前資料庫無記錄 - 請切換品牌
+                        </div>
+                    )}
+                    </div>
+                </main>
+
+                <footer className="py-3 bg-slate-950 border-t border-slate-900 px-4 lg:px-8 flex flex-col lg:flex-row justify-between items-center text-[9px] lg:text-[10px] font-bold text-slate-700 tracking-widest uppercase relative z-30 shadow-2xl gap-2 lg:gap-0 text-center lg:text-left">
+                    <div className="flex gap-4 lg:gap-10 items-center">
+                        <span className="flex items-center gap-2"><CircleIcon size={8} fill="#10b981" className="text-emerald-500"/> SYSTEM ONLINE</span>
+                        <div className="h-4 w-px bg-slate-800 hidden lg:block"></div>
+                        <div className="hidden lg:flex items-center gap-2 text-slate-500 font-black italic">
+                            <ZapIcon size={14} className="text-blue-500"/> 旗艦視覺優化版：單機動態微調授權啟用 (Safe Mode)
+                        </div>
+                    </div>
+                    <p>銓/昇展通信 | 桃園市龜山區中興路402號 | 03-3590858</p>
+                </footer>
                 </div>
             );
-        };
+        }
+
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
     </script>
