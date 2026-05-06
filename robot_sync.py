@@ -1,135 +1,220 @@
 import json
+import asyncio
+import random
 import os
+import re
 from datetime import datetime
+from playwright.async_api import async_playwright
 
 # ==========================================
-# 銓展通訊 - 報價機器人全店總司令 (v5.0 終極完整版)
-# 100% 完整收錄筆記本所有型號與規格 ID
-# 包含所有手機、平板、手錶、耳機，一個都沒少！
+# 銓展通訊 - 最強自動爬蟲大腦 (v5.0 終極版)
 # ==========================================
 
-def update_prices():
-    prices_data = {
-        # 🍎 APPLE (iPhone)
-        "apple_15": {"128G": {"landmark": 21000, "jasons": 21200, "sogi": 21500}},
-        "apple_16e": {"128G": {"landmark": 18000, "jasons": 18200, "sogi": 18500}, "256G": {"landmark": 21500, "jasons": 21700, "sogi": 22000}},
-        "apple_17": {"256G": {"landmark": 33000, "jasons": 33200, "sogi": 33500}, "512G": {"landmark": 40000, "jasons": 40200, "sogi": 40500}},
-        "apple_17e": {"256G": {"landmark": 22000, "jasons": 22200, "sogi": 22500}, "512G": {"landmark": 26000, "jasons": 26200, "sogi": 26500}},
-        "apple_17air": {"256G": {"landmark": 32000, "jasons": 32200, "sogi": 32500}, "512G": {"landmark": 39000, "jasons": 39200, "sogi": 39500}},
-        "apple_17p": {"256G": {"landmark": 39000, "jasons": 39200, "sogi": 39500}, "512G": {"landmark": 46000, "jasons": 46200, "sogi": 46500}, "1T": {"landmark": 53000, "jasons": 53200, "sogi": 53500}},
-        "apple_17pm": {"256G": {"landmark": 43000, "jasons": 43200, "sogi": 43500}, "512G": {"landmark": 50000, "jasons": 50200, "sogi": 50500}, "1T": {"landmark": 57000, "jasons": 57200, "sogi": 57500}, "2T": {"landmark": 64000, "jasons": 64200, "sogi": 64500}},
+# 防封鎖 User-Agent 池 (多種瀏覽器與系統偽裝)
+USER_AGENTS = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Edge/122.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3 Safari/605.1.15"
+]
 
-        # 🔵 ASUS
-        "asus_z12u": {"12G/256G": {"landmark": 30000, "jasons": 30200, "sogi": 30500}},
+# --- 輔助工具函數 ---
+def clean_price(price_str):
+    """清洗價格字串，過濾所有中英文字與符號，轉為純數字"""
+    if not price_str:
+        return 0
+    cleaned = re.sub(r'[^\d]', '', str(price_str))
+    return int(cleaned) if cleaned else 0
 
-        # 🌈 GOOGLE
-        "google_9a5g": {"8G/128G": {"landmark": 13000, "jasons": 13200, "sogi": 13500}, "8G/256G": {"landmark": 15000, "jasons": 15200, "sogi": 15500}},
-        "google_10": {"12G/128G": {"landmark": 25000, "jasons": 25200, "sogi": 25500}, "12G/256G": {"landmark": 28000, "jasons": 28200, "sogi": 28500}},
-        "google_10p": {"16G/128G": {"landmark": 32000, "jasons": 32200, "sogi": 32500}, "16G/256G": {"landmark": 35000, "jasons": 35200, "sogi": 35500}, "16G/512G": {"landmark": 39000, "jasons": 39200, "sogi": 39500}},
-        "google_10pxl": {"16G/256G": {"landmark": 38000, "jasons": 38200, "sogi": 38500}, "16G/512G": {"landmark": 42000, "jasons": 42200, "sogi": 42500}},
-        "google_10pfold": {"16G/256G": {"landmark": 55000, "jasons": 55200, "sogi": 55500}, "16G/512G": {"landmark": 59000, "jasons": 59200, "sogi": 59500}},
-        "google_10a": {"8G/128G": {"landmark": 15000, "jasons": 15200, "sogi": 15500}, "8G/256G": {"landmark": 17000, "jasons": 17200, "sogi": 17500}},
+def is_valid_price(price):
+    """【老闆指定防呆】異常排除：過濾 0 元、1元或 999,999 等無效佔位價格"""
+    if price <= 1 or price >= 999999:
+        return False
+    return True
 
-        # Ⓜ️ MOTOROLA
-        "moto_g06": {"4G/64G": {"landmark": 4000, "jasons": 4100, "sogi": 4200}},
-        "moto_edge70": {"8G/256G": {"landmark": 15000, "jasons": 15200, "sogi": 15500}},
+def build_regex(text):
+    """【強大模糊匹配】允許字詞間有任意特殊符號 (如空白、括號、減號等)"""
+    words = text.split()
+    return r".*?".join(re.escape(word) for word in words)
 
-        # 🟢 OPPO
-        "oppo_a6x": {"4G/128G": {"landmark": 6000, "jasons": 6100, "sogi": 6200}},
-        "oppo_a6s": {"6G/128G": {"landmark": 8000, "jasons": 8100, "sogi": 8200}, "8G/256G": {"landmark": 10000, "jasons": 10200, "sogi": 10500}},
-        "oppo_r15f": {"12G/256G": {"landmark": 11000, "jasons": 11200, "sogi": 11500}},
-        "oppo_r15": {"12G/256G": {"landmark": 14000, "jasons": 14200, "sogi": 14500}, "12G/512G": {"landmark": 16000, "jasons": 16200, "sogi": 16500}},
-        "oppo_r15p": {"12G/256G": {"landmark": 18000, "jasons": 18200, "sogi": 18500}},
-        "oppo_r15pm": {"12G/512G": {"landmark": 22000, "jasons": 22200, "sogi": 22500}},
-        "oppo_x9": {"12G/256G": {"landmark": 28000, "jasons": 28200, "sogi": 28500}},
-        "oppo_x9p": {"16G/512G": {"landmark": 35000, "jasons": 35200, "sogi": 35500}},
+async def random_delay():
+    """【防封鎖】隨機延遲 3.5 ~ 7.5 秒，模擬真人行為"""
+    delay = random.uniform(3.5, 7.5)
+    print(f"⏳ 擬真延遲 {delay:.1f} 秒...")
+    await asyncio.sleep(delay)
 
-        # 🟡 REALME
-        "realme_c71": {"4G/128G": {"landmark": 5000, "jasons": 5100, "sogi": 5200}},
-        "realme_gt7t": {"12G/256G": {"landmark": 16000, "jasons": 16200, "sogi": 16500}},
-        "realme_15t": {"8G/256G": {"landmark": 12000, "jasons": 12200, "sogi": 12500}},
-        "realme_15p": {"12G/256G": {"landmark": 10000, "jasons": 10200, "sogi": 10500}},
-        "realme_16p": {"12G/256G": {"landmark": 13000, "jasons": 13200, "sogi": 13500}},
+# --- 主爬蟲引擎 ---
+async def fetch_prices():
+    print("=============================================")
+    print(f"🤖 銓展通訊爬蟲系統啟動 | 時間: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print("=============================================")
 
-        # 🌌 SAMSUNG
-        "sam_a07": {"4G/128G": {"landmark": 5000, "jasons": 5100, "sogi": 5200}},
-        "sam_a17": {"6G/128G": {"landmark": 6000, "jasons": 6100, "sogi": 6200}, "8G/128G": {"landmark": 7000, "jasons": 7100, "sogi": 7200}},
-        "sam_a36": {"8G/128G": {"landmark": 10000, "jasons": 10200, "sogi": 10500}},
-        "sam_a37": {"8G/256G": {"landmark": 12000, "jasons": 12200, "sogi": 12500}},
-        "sam_a56": {"8G/256G": {"landmark": 13000, "jasons": 13200, "sogi": 13500}, "12G/256G": {"landmark": 15000, "jasons": 15200, "sogi": 15500}},
-        "sam_a57": {"8G/256G": {"landmark": 14000, "jasons": 14200, "sogi": 14500}, "12G/256G": {"landmark": 16000, "jasons": 16200, "sogi": 16500}},
-        "sam_s25e": {"12G/256G": {"landmark": 32000, "jasons": 32200, "sogi": 32500}, "12G/512G": {"landmark": 36000, "jasons": 36200, "sogi": 36500}},
-        "sam_s25": {"12G/256G": {"landmark": 28000, "jasons": 28200, "sogi": 28500}},
-        "sam_s25p": {"12G/256G": {"landmark": 34000, "jasons": 34200, "sogi": 34500}, "12G/512G": {"landmark": 38000, "jasons": 38200, "sogi": 38500}},
-        "sam_s25u": {"12G/256G": {"landmark": 42000, "jasons": 42200, "sogi": 42500}, "12G/512G": {"landmark": 46000, "jasons": 46200, "sogi": 46500}},
-        "sam_s26": {"12G/256G": {"landmark": 30000, "jasons": 30200, "sogi": 30500}, "12G/512G": {"landmark": 34000, "jasons": 34200, "sogi": 34500}},
-        "sam_s26p": {"12G/256G": {"landmark": 36000, "jasons": 36200, "sogi": 36500}, "12G/512G": {"landmark": 40000, "jasons": 40200, "sogi": 40500}},
-        "sam_s26u": {"12G/256G": {"landmark": 44000, "jasons": 44200, "sogi": 44500}, "12G/512G": {"landmark": 48000, "jasons": 48200, "sogi": 48500}},
-        "sam_flip7": {"12G/256G": {"landmark": 32000, "jasons": 32200, "sogi": 32500}, "12G/512G": {"landmark": 36000, "jasons": 36200, "sogi": 36500}},
-        "sam_fold7": {"12G/256G": {"landmark": 55000, "jasons": 55200, "sogi": 55500}, "12G/512G": {"landmark": 59000, "jasons": 59200, "sogi": 59500}},
-        "sam_trifold": {"16G/512G": {"landmark": 85000, "jasons": 85200, "sogi": 85500}},
+    # 1. 讀取外部設定檔 config.json
+    try:
+        with open('config.json', 'r', encoding='utf-8') as f:
+            MAPPING = json.load(f)
+        print(f"📂 成功載入 config.json，共追蹤 {len(MAPPING)} 款設備")
+    except Exception as e:
+        print(f"❌ 讀取 config.json 失敗，請確認檔案是否存在: {e}")
+        return
 
-        # 🔪 SHARP
-        "sharp_r10": {"12G/512G": {"landmark": 28000, "jasons": 28200, "sogi": 28500}},
-        "sharp_sense10": {"8G/256G": {"landmark": 14000, "jasons": 14200, "sogi": 14500}},
-        "sharp_wish5": {"6G/128G": {"landmark": 7000, "jasons": 7100, "sogi": 7200}, "8G/256G": {"landmark": 9000, "jasons": 9100, "sogi": 9200}},
-        "sharp_wish5s": {"8G/256G": {"landmark": 10000, "jasons": 10200, "sogi": 10500}},
+    # 2. 讀取舊有價格檔 (備用繼承機制，若抓取失敗則沿用舊價)
+    old_data = {}
+    if os.path.exists('prices.json'):
+        try:
+            with open('prices.json', 'r', encoding='utf-8') as f:
+                old_data = json.load(f)
+            print("💾 成功載入舊有 prices.json，啟動異常防護網")
+        except Exception as e:
+            print(f"⚠️ 讀取舊價格檔失敗，將建立全新資料: {e}")
 
-        # 🟣 VIVO
-        "vivo_y04": {"4G/128G": {"landmark": 4000, "jasons": 4100, "sogi": 4200}},
-        "vivo_y05": {"4G/128G": {"landmark": 4500, "jasons": 4600, "sogi": 4700}},
-        "vivo_y21": {"6G/128G": {"landmark": 6000, "jasons": 6100, "sogi": 6200}},
-        "vivo_y29s": {"6G/128G": {"landmark": 7000, "jasons": 7100, "sogi": 7200}},
-        "vivo_y31": {"8G/256G": {"landmark": 8000, "jasons": 8100, "sogi": 8200}},
-        "vivo_v60": {"12G/256G": {"landmark": 15000, "jasons": 15200, "sogi": 15500}},
-        "vivo_v60l": {"8G/256G": {"landmark": 11000, "jasons": 11200, "sogi": 11500}, "12G/256G": {"landmark": 13000, "jasons": 13200, "sogi": 13500}},
-        "vivo_v70": {"12G/256G": {"landmark": 16000, "jasons": 16200, "sogi": 16500}, "12G/512G": {"landmark": 19000, "jasons": 19200, "sogi": 19500}},
-        "vivo_v70fe": {"8G/256G": {"landmark": 13000, "jasons": 13200, "sogi": 13500}, "12G/256G": {"landmark": 15000, "jasons": 15200, "sogi": 15500}},
-        "vivo_x300": {"12G/256G": {"landmark": 26000, "jasons": 26200, "sogi": 26500}},
-        "vivo_x300p": {"16G/512G": {"landmark": 34000, "jasons": 34200, "sogi": 34500}},
+    # 3. 建立準備輸出至前端的結果字典
+    results = {}
+    for uid, info in MAPPING.items():
+        cap = info["capacity"]
+        if uid not in results:
+            results[uid] = {}
+        # 初始化預設值
+        results[uid][cap] = {"landmark": 0, "jasons": 0, "sogi": 0}
+        
+        # 【繼承機制】先把舊價格塞入打底，萬一爬失敗，至少保有昨日價格
+        if uid in old_data and cap in old_data[uid]:
+            results[uid][cap]["landmark"] = old_data[uid][cap].get("landmark", 0)
+            results[uid][cap]["jasons"] = old_data[uid][cap].get("jasons", 0)
+            results[uid][cap]["sogi"] = old_data[uid][cap].get("sogi", 0)
 
-        # 🟠 XIAOMI
-        "xiao_r15": {"4G/128G": {"landmark": 6000, "jasons": 6100, "sogi": 6200}},
-        "xiao_r15c": {"4G/128G": {"landmark": 4000, "jasons": 4100, "sogi": 4200}},
-        "xiao_rn15pp": {"12G/256G": {"landmark": 13000, "jasons": 13200, "sogi": 13500}},
-        "xiao_15t": {"12G/256G": {"landmark": 15000, "jasons": 15200, "sogi": 15500}, "12G/512G": {"landmark": 18000, "jasons": 18200, "sogi": 18500}},
-        "xiao_15tp": {"12G/512G": {"landmark": 20000, "jasons": 20200, "sogi": 20500}},
-        "xiao_17": {"12G/512G": {"landmark": 28000, "jasons": 28200, "sogi": 28500}},
+    # 4. 啟動 Playwright 無頭瀏覽器
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
+        ua = random.choice(USER_AGENTS)
+        context = await browser.new_context(
+            user_agent=ua,
+            viewport={'width': random.randint(1366, 1920), 'height': random.randint(768, 1080)}
+        )
+        page = await context.new_page()
+        
+        # 攔截不必要的資源(如字體、無用媒體)，加快加載速度與減少被擋機率
+        await page.route("**/*", lambda route: route.continue_() if route.request.resource_type in ["document", "script", "xhr", "fetch"] else route.abort())
 
-        # 📝 平板類
-        "ipad11_25": {"6G/128G": {"landmark": 12900, "jasons": 13200, "sogi": 13500}, "6G/256G": {"landmark": 16900, "jasons": 17200, "sogi": 17500}},
-        "ipad_air11_25": {"8G/128G": {"landmark": 17900, "jasons": 18200, "sogi": 18500}, "8G/256G": {"landmark": 21900, "jasons": 22200, "sogi": 22500}},
-        "ipad_air11_26": {"12G/128G": {"landmark": 19900, "jasons": 20200, "sogi": 20500}, "12G/256G": {"landmark": 23900, "jasons": 24200, "sogi": 24500}},
-        "ipad_air13_25": {"8G/128G": {"landmark": 23900, "jasons": 24200, "sogi": 24500}, "8G/256G": {"landmark": 27900, "jasons": 28200, "sogi": 28500}},
-        "ipad_air13_26": {"12G/128G": {"landmark": 25900, "jasons": 26200, "sogi": 26500}, "12G/256G": {"landmark": 29900, "jasons": 30200, "sogi": 30500}},
-        "ipad_pro11_m5": {"12G/256G": {"landmark": 32900, "jasons": 33200, "sogi": 33500}, "12G/512G": {"landmark": 39900, "jasons": 40200, "sogi": 40500}},
-        "ipad_pro13_m5": {"12G/256G": {"landmark": 42900, "jasons": 43200, "sogi": 43500}, "12G/512G": {"landmark": 49900, "jasons": 50200, "sogi": 50500}},
-        "moto_pad60_neo": {"8G/128G": {"landmark": 8000, "jasons": 8200, "sogi": 8500}},
-        "moto_pad60_lite": {"4G/128G": {"landmark": 5000, "jasons": 5200, "sogi": 5500}},
-        "oppo_pad_se": {"4G/128G": {"landmark": 6000, "jasons": 6200, "sogi": 6500}},
-        "sam_tab_a11": {"4G/64G": {"landmark": 5500, "jasons": 5700, "sogi": 6000}},
-        "sam_tab_a11_plus": {"6G/128G": {"landmark": 7500, "jasons": 7700, "sogi": 8000}},
-        "sam_tab_s10_fe": {"8G/128G": {"landmark": 12500, "jasons": 12700, "sogi": 13000}},
-        "sam_tab_s10_lite": {"6G/128G": {"landmark": 10500, "jasons": 10700, "sogi": 11000}},
-        "sam_tab_s11": {"12G/128G": {"landmark": 20500, "jasons": 20700, "sogi": 21000}},
-        "sam_tab_s11_ultra": {"12G/256G": {"landmark": 35500, "jasons": 35700, "sogi": 36000}},
-        "xiao_redmi_pad2_pro": {"8G/256G": {"landmark": 9500, "jasons": 9700, "sogi": 10000}},
-        "xiao_redmi_pad2": {"8G/256G": {"landmark": 7500, "jasons": 7700, "sogi": 8000}},
+        print(f"🚀 瀏覽器引擎就緒 (User-Agent: {ua[:40]}...)")
 
-        # ⌚ 智慧手錶
-        "aw_se3": {"40mm GPS (64G)": {"landmark": 7500, "jasons": 7700, "sogi": 7900}, "44mm GPS (64G)": {"landmark": 8500, "jasons": 8700, "sogi": 8900}, "40mm LTE (64G)": {"landmark": 9000, "jasons": 9200, "sogi": 9500}, "44mm LTE (64G)": {"landmark": 10000, "jasons": 10200, "sogi": 10500}},
-        "aw_s11": {"42mm GPS (64G)": {"landmark": 12500, "jasons": 12700, "sogi": 12900}, "46mm GPS (64G)": {"landmark": 13500, "jasons": 13700, "sogi": 13900}, "42mm LTE (64G)": {"landmark": 15500, "jasons": 15700, "sogi": 15900}, "46mm LTE (64G)": {"landmark": 16500, "jasons": 16700, "sogi": 16900}},
-        "aw_u3": {"49mm LTE (64G)": {"landmark": 26500, "jasons": 26700, "sogi": 26900}},
+        # ---------------------------------------------------------
+        # [站點 1] 地標網通 (Landmark)
+        # ---------------------------------------------------------
+        try:
+            print("\n👉 正在前往【地標網通】...")
+            await page.goto("https://www.landtop.com.tw/products", timeout=60000)
+            await page.wait_for_load_state("networkidle") # 【WaitState 確保加載】
+            await page.evaluate("window.scrollTo(0, document.body.scrollHeight)") # 【向下捲動防懶加載】
+            await random_delay()
 
-        # 🎧 藍牙耳機
-        "ap_pro3": {"標準": {"landmark": 6900, "jasons": 7100, "sogi": 7400}},
-        "ap_4": {"標準": {"landmark": 4200, "jasons": 4300, "sogi": 4500}},
-        "ap_4_anc": {"標準": {"landmark": 5500, "jasons": 5700, "sogi": 5900}}
-    }
+            success_count = 0
+            for uid, info in MAPPING.items():
+                name, cap = info["name"], info["capacity"]
+                name_regex, cap_regex = build_regex(name), build_regex(cap)
+                
+                elements = await page.locator(f"text={name}").all()
+                for el in elements:
+                    text_content = await el.text_content()
+                    if re.search(name_regex, text_content, re.IGNORECASE) and re.search(cap_regex, text_content, re.IGNORECASE):
+                        price_text = await el.locator("xpath=ancestor::div[contains(@class, 'product')]//span[contains(@class, 'price')]").first.text_content()
+                        
+                        parsed_price = clean_price(price_text)
+                        if is_valid_price(parsed_price):
+                            results[uid][cap]["landmark"] = parsed_price
+                            print(f"✅ 地標: {name} {cap} -> ${parsed_price}")
+                            success_count += 1
+                        break
+            
+            # 【自動 Debug 截圖】
+            if success_count < len(MAPPING):
+                await page.screenshot(path="error_landmark.png", full_page=True)
+                print("⚠️ 地標有缺漏，已儲存 error_landmark.png")
+                
+        except Exception as e:
+            print(f"❌ 地標發生嚴重錯誤: {e}")
+            await page.screenshot(path="error_landmark_crash.png")
 
+        # ---------------------------------------------------------
+        # [站點 2] 傑昇通信 (Jyes)
+        # ---------------------------------------------------------
+        try:
+            print("\n👉 正在前往【傑昇通信】...")
+            await page.goto("https://www.jyes.com.tw/product.php", timeout=60000)
+            await page.wait_for_load_state("networkidle")
+            await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+            await random_delay()
+
+            success_count = 0
+            for uid, info in MAPPING.items():
+                name, cap = info["name"], info["capacity"]
+                name_regex, cap_regex = build_regex(name), build_regex(cap)
+                
+                elements = await page.locator(f"text={name}").all()
+                for el in elements:
+                    text_content = await el.text_content()
+                    if re.search(name_regex, text_content, re.IGNORECASE) and re.search(cap_regex, text_content, re.IGNORECASE):
+                        price_text = await el.locator("xpath=ancestor::div[contains(@class, 'item')]//div[contains(text(), '最低價')]/following-sibling::div").first.text_content()
+                        
+                        parsed_price = clean_price(price_text)
+                        if is_valid_price(parsed_price):
+                            results[uid][cap]["jasons"] = parsed_price
+                            print(f"✅ 傑昇: {name} {cap} -> ${parsed_price}")
+                            success_count += 1
+                        break
+                        
+            if success_count < len(MAPPING):
+                await page.screenshot(path="error_jasons.png", full_page=True)
+                print("⚠️ 傑昇有缺漏，已儲存 error_jasons.png")
+                
+        except Exception as e:
+            print(f"❌ 傑昇發生嚴重錯誤: {e}")
+            await page.screenshot(path="error_jasons_crash.png")
+
+        # ---------------------------------------------------------
+        # [站點 3] 手機王 (SOGI)
+        # ---------------------------------------------------------
+        try:
+            print("\n👉 正在前往【手機王】...")
+            await page.goto("https://www.sogi.com.tw/prices", timeout=60000)
+            await page.wait_for_load_state("networkidle")
+            await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+            await random_delay()
+
+            success_count = 0
+            for uid, info in MAPPING.items():
+                name, cap = info["name"], info["capacity"]
+                name_regex, cap_regex = build_regex(name), build_regex(cap)
+                
+                elements = await page.locator(f"text={name}").all()
+                for el in elements:
+                    text_content = await el.text_content()
+                    if re.search(name_regex, text_content, re.IGNORECASE) and re.search(cap_regex, text_content, re.IGNORECASE):
+                        price_text = await el.locator("xpath=ancestor::li//span[contains(@class, 'price')]").first.text_content()
+                        
+                        parsed_price = clean_price(price_text)
+                        if is_valid_price(parsed_price):
+                            results[uid][cap]["sogi"] = parsed_price
+                            print(f"✅ 手機王: {name} {cap} -> ${parsed_price}")
+                            success_count += 1
+                        break
+                        
+            if success_count < len(MAPPING):
+                await page.screenshot(path="error_sogi.png", full_page=True)
+                print("⚠️ 手機王有缺漏，已儲存 error_sogi.png")
+                
+        except Exception as e:
+            print(f"❌ 手機王發生嚴重錯誤: {e}")
+            await page.screenshot(path="error_sogi_crash.png")
+
+        await browser.close()
+        print("\n🎉 爬蟲掃描結束，準備更新資料庫。")
+
+    # 5. 寫入最終的 prices.json (完全對接老闆的 React 戰情室)
     with open('prices.json', 'w', encoding='utf-8') as f:
-        json.dump(prices_data, f, ensure_ascii=False, indent=4)
-    print(f"✅ 全店報價同步成功！ | 更新時間：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        json.dump(results, f, ensure_ascii=False, indent=4)
+        
+    print(f"💾 成功儲存最新報價至 prices.json！ | 完成時間：{datetime.now().strftime('%H:%M:%S')}")
 
 if __name__ == "__main__":
-    update_prices()
+    asyncio.run(fetch_prices())
