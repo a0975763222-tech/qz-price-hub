@@ -1,0 +1,18 @@
+{
+    "ip17-256": {
+        "name": "iPhone 17",
+        "capacity": "256G"
+    },
+    "ip17-slim-256": {
+        "name": "iPhone 17 Slim",
+        "capacity": "256G"
+    },
+    "ip17-pro-256": {
+        "name": "iPhone 17 Pro",
+        "capacity": "256G"
+    },
+    "ip17-pm-256": {
+        "name": "iPhone 17 Pro Max",
+        "capacity": "256G"
+    }
+}
