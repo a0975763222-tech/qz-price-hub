@@ -6,51 +6,52 @@ OUTPUT_FILE = 'prices.json'
 
 async def fetch_landmark_price(page, keyword, capacity):
     try:
-        # 改成先去首頁，模擬真人搜尋
-        print(f"🔍 準備搜尋: {keyword} {capacity}...")
-        await page.goto("https://www.landtop.com.tw/products", wait_until="networkidle", timeout=30000)
+        # 改用更輕量的網址，並放寬載入條件
+        print(f"🔍 試探搜尋: {keyword}...")
+        search_url = f"https://www.landtop.com.tw/products?q={urllib.parse.quote(keyword)}"
         
-        # 找到搜尋框並輸入
-        search_box = page.locator("input[name='q']").first
-        await search_box.fill(keyword)
-        await search_box.press("Enter")
+        # wait_until 改成 commit，只要一連上就開始，不等網頁轉完
+        await page.goto(search_url, wait_until="commit", timeout=20000)
         
-        # 強制多等一下，等資料噴出來
-        await asyncio.sleep(8) 
+        # 給它一點時間反應，但不強求網路閒置
+        await asyncio.sleep(10) 
         
-        # 這次我們抓全網頁文字，看看到底有什麼
-        body_text = await page.inner_text("body")
-        lines = body_text.split('\n')
+        # 抓取所有看得見的文字
+        content = await page.content()
+        # 移除 HTML 標籤只留純文字
+        clean_text = re.sub('<[^<]+?>', '', content).upper().replace(" ", "")
         
         model_nums = re.findall(r'\d+', keyword)
         cap_num = re.findall(r'\d+', capacity)[0] if re.findall(r'\d+', capacity) else ""
 
-        for line in lines:
-            line_upper = line.upper().replace(" ", "")
-            # 只要這一行有手機型號跟容量數字
-            if all(n in line_upper for n in model_nums) and cap_num in line_upper:
-                # 找價格符號
-                price_match = re.search(r'\$([\d,]+)', line_upper)
-                if price_match:
-                    price = int(price_match.group(1).replace(',', ''))
-                    if 1000 < price < 100000:
-                        print(f"✅ 抓到報價: {line[:20]} -> {price}")
-                        return price
+        if all(n in clean_text for n in model_nums) and cap_num in clean_text:
+            # 尋找價格格式
+            matches = re.findall(r'\$([\d,]+)', clean_text)
+            if matches:
+                # 通常搜尋結果第一個就是我們要的
+                price = int(matches[0].replace(',', ''))
+                print(f"✅ 成功摸到價格: {price}")
+                return price
         
-        print(f"⚠️ 網頁載入內容不足，沒看到 {keyword} 的價格標籤")
+        print(f"⚠️ 摸到了網頁但沒看到 {keyword} 的數字")
         return None
     except Exception as e:
-        print(f"❌ 錯誤: {str(e)}")
+        print(f"❌ 連線失敗: 網站可能封鎖了 GitHub 伺服器")
         return None
 
 async def main():
-    print("🚀 銓展通訊 - 暴力模擬真人爬蟲啟動...")
-    config = {k: v for k, v in (json.load(open(CONFIG_FILE, 'r', encoding='utf-8'))).items()}
+    print("🚀 詮展通訊 - 輕量化繞路測試...")
+    config = json.load(open(CONFIG_FILE, 'r', encoding='utf-8'))
     prices = json.load(open(OUTPUT_FILE, 'r', encoding='utf-8')) if os.path.exists(OUTPUT_FILE) else {}
     
     async with async_playwright() as p:
+        # 模擬更像一般人的電腦
         browser = await p.chromium.launch(headless=True)
-        page = await browser.new_page(user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
+        context = await browser.new_context(
+            viewport={'width': 1920, 'height': 1080},
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+        )
+        page = await context.new_page()
         
         for fid, det in config.items():
             price = await fetch_landmark_price(page, det['keyword'], det['capacity'])
@@ -59,7 +60,10 @@ async def main():
                 if det['capacity'] not in prices[fid]: prices[fid][det['capacity']] = {}
                 prices[fid][det['capacity']]["landmark"] = price
         await browser.close()
-    with open(OUTPUT_FILE, 'w', encoding='utf-8') as f: json.dump(prices, f, ensure_ascii=False, indent=4)
-    print("🎉 任務完成！")
+    
+    with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
+        json.dump(prices, f, ensure_ascii=False, indent=4)
+    print("🎉 測試結束")
 
-if __name__ == "__main__": asyncio.run(main())
+if __name__ == "__main__":
+    asyncio.run(main())
